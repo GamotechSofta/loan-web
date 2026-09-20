@@ -14,6 +14,14 @@ import {
   sanitizeAadhaar,
   sanitizePan,
 } from './utils/idValidation.js'
+import {
+  CIBIL_CONSENT_TEXT,
+  emptyCibilReport,
+  extractCibilScore,
+  isLoanApplicationActive,
+  summarizeCibilPayload,
+  toPublicCibilReport,
+} from './utils/cibil.js'
 
 dotenv.config()
 
@@ -51,7 +59,14 @@ const {
   ADMIN_USERNAME = 'admin',
   ADMIN_PASSWORD = 'admin123',
   JWT_SECRET = 'sakaar-microcredit-admin-jwt-secret-change-me',
+  API_KEY,
+  TRUDETAILS_API_KEY,
+  PUBLIC_BASE_URL = '',
+  CIBIL_CALLBACK_URL = '',
 } = process.env
+
+const TRUDETAILS_KEY = String(TRUDETAILS_API_KEY || API_KEY || '').trim()
+const TRUDETAILS_CIBIL_URL = 'https://trudetails.com/enrich/v2/get-cibil-report'
 
 const useSender = MSG91_USE_SENDER === 'true'
 /** MSG91 OTP digit length — must match UI (6 boxes) and DLT template. */
@@ -458,6 +473,233 @@ function requireUserAuth(req, res, next) {
     return next()
   } catch {
     return res.status(401).json({ success: false, message: 'Invalid or expired token.' })
+  }
+}
+
+function resolveCibilCallbackUrl() {
+  if (CIBIL_CALLBACK_URL) return String(CIBIL_CALLBACK_URL).trim()
+  if (PUBLIC_BASE_URL) {
+    return `${String(PUBLIC_BASE_URL).replace(/\/$/, '')}/api/cibil/callback`
+  }
+  return 'https://example.com/report-path'
+}
+
+function validateTrudetailsConfig() {
+  if (!TRUDETAILS_KEY) {
+    return 'Missing TruDetails API key. Set API_KEY or TRUDETAILS_API_KEY in environment.'
+  }
+  return null
+}
+
+function findActiveApplicationForMobile(mobile) {
+  const submissions = readSubmissions()
+  const matches = submissions.filter((item) => item.mobile === mobile)
+  if (matches.length === 0) return null
+
+  const user = getUserByMobile(mobile)
+  const active = matches.find((item) => isLoanApplicationActive(item, user))
+  return active || null
+}
+
+function getSubmissionById(submissionId) {
+  return readSubmissions().find((item) => item.id === submissionId) || null
+}
+
+function updateSubmissionCibil(submissionId, cibilPatch) {
+  const submissions = readSubmissions()
+  const index = submissions.findIndex((item) => item.id === submissionId)
+  if (index < 0) return null
+
+  const now = new Date().toISOString()
+  const current = submissions[index].cibilReport || emptyCibilReport()
+  const nextReport = {
+    ...current,
+    ...cibilPatch,
+    updatedAt: now,
+  }
+  if (nextReport.report || nextReport.providerResponse) {
+    nextReport.score =
+      extractCibilScore(nextReport.report) ||
+      extractCibilScore(nextReport.providerResponse) ||
+      nextReport.score ||
+      null
+    nextReport.summary =
+      summarizeCibilPayload(nextReport.report || nextReport.providerResponse) ||
+      nextReport.summary
+  }
+
+  submissions[index] = {
+    ...submissions[index],
+    cibilReport: nextReport,
+    updatedAt: now,
+  }
+  writeSubmissions(submissions)
+
+  const users = readUsers()
+  const userIndex = users.findIndex((item) => item.mobile === submissions[index].mobile)
+  if (userIndex >= 0) {
+    users[userIndex] = {
+      ...users[userIndex],
+      cibilReport: toPublicCibilReport(nextReport),
+      updatedAt: now,
+    }
+    writeUsers(users)
+  }
+
+  return submissions[index]
+}
+
+function matchSubmissionFromCibilCallback(payload) {
+  if (!payload || typeof payload !== 'object') return null
+
+  const requestId =
+    payload.request_id ||
+    payload.requestId ||
+    payload.RequestId ||
+    payload?.data?.request_id ||
+    payload?.data?.requestId ||
+    null
+  const mobile = normalizeIndianMobile(
+    payload.Mobile_Number ||
+      payload.mobile ||
+      payload.mobile_number ||
+      payload?.data?.Mobile_Number ||
+      payload?.data?.mobile ||
+      payload?.data?.mobile_number,
+  )
+  const pan = sanitizePan(
+    payload.PAN_Number || payload.pan || payload.pan_number || payload?.data?.PAN_Number || payload?.data?.pan,
+  )
+
+  const submissions = readSubmissions()
+  if (requestId) {
+    const byRequest = submissions.find(
+      (item) => item.cibilReport?.requestId && String(item.cibilReport.requestId) === String(requestId),
+    )
+    if (byRequest) return byRequest
+  }
+  if (mobile) {
+    const pending = submissions.find(
+      (item) =>
+        item.mobile === mobile &&
+        (item.cibilReport?.status === 'pending' || item.cibilReport?.status === 'requested'),
+    )
+    if (pending) return pending
+    const latest = submissions.find((item) => item.mobile === mobile)
+    if (latest) return latest
+  }
+  if (pan) {
+    const byPan = submissions.find(
+      (item) => sanitizePan(item.pan) === pan && item.cibilReport?.status === 'pending',
+    )
+    if (byPan) return byPan
+  }
+  return null
+}
+
+async function fetchCibilFromTrudetails({ mobile, pan, fullName }) {
+  const callbackUrl = resolveCibilCallbackUrl()
+  const response = await axios.post(
+    TRUDETAILS_CIBIL_URL,
+    {
+      Mobile_Number: mobile,
+      PAN_Number: pan,
+      Full_Name: fullName,
+      Callback_Url: callbackUrl,
+      Concent_Text: CIBIL_CONSENT_TEXT,
+      Concent: 'Y',
+    },
+    {
+      headers: {
+        Authorization: TRUDETAILS_KEY,
+        'Content-Type': 'application/json',
+      },
+      timeout: 45000,
+    },
+  )
+  return response
+}
+
+async function requestCibilForSubmission(submission, { triggeredBy }) {
+  const configError = validateTrudetailsConfig()
+  if (configError) {
+    return { ok: false, statusCode: 500, message: configError }
+  }
+
+  const mobile = normalizeIndianMobile(submission.mobile)
+  const pan = sanitizePan(submission.pan)
+  const fullName = String(submission.fullName || '').trim()
+  const panError = getPanError(pan)
+
+  if (!mobile) {
+    return { ok: false, statusCode: 400, message: 'Valid mobile number is required for CIBIL.' }
+  }
+  if (panError) {
+    return { ok: false, statusCode: 400, message: panError }
+  }
+  if (!fullName) {
+    return { ok: false, statusCode: 400, message: 'Full name is required for CIBIL.' }
+  }
+
+  const now = new Date().toISOString()
+  updateSubmissionCibil(submission.id, {
+    status: 'pending',
+    requestedAt: now,
+    error: null,
+    triggeredBy,
+  })
+
+  try {
+    const response = await fetchCibilFromTrudetails({ mobile, pan, fullName })
+    const providerData = response.data
+    const requestId =
+      providerData?.request_id ||
+      providerData?.requestId ||
+      providerData?.data?.request_id ||
+      providerData?.data?.requestId ||
+      null
+    const immediateScore = extractCibilScore(providerData)
+    const looksComplete = Boolean(immediateScore) || Boolean(providerData?.report || providerData?.data?.report)
+
+    const updated = updateSubmissionCibil(submission.id, {
+      status: looksComplete ? 'ready' : 'pending',
+      requestId: requestId ? String(requestId) : null,
+      providerResponse: providerData,
+      report: looksComplete ? providerData?.report || providerData?.data || providerData : null,
+      score: immediateScore,
+      summary: summarizeCibilPayload(providerData),
+      error: null,
+      triggeredBy,
+    })
+
+    return {
+      ok: true,
+      statusCode: 200,
+      message: looksComplete
+        ? 'CIBIL report fetched successfully.'
+        : 'CIBIL report requested. It will appear when the provider callback completes.',
+      data: toPublicCibilReport(updated?.cibilReport),
+    }
+  } catch (error) {
+    const apiError = error.response?.data || { message: error.message }
+    const message =
+      apiError?.message ||
+      apiError?.error ||
+      (typeof apiError === 'string' ? apiError : null) ||
+      'Failed to fetch CIBIL report.'
+    updateSubmissionCibil(submission.id, {
+      status: 'failed',
+      error: typeof message === 'string' ? message : 'Failed to fetch CIBIL report.',
+      providerResponse: apiError,
+      triggeredBy,
+    })
+    console.error('TruDetails CIBIL error:', apiError)
+    return {
+      ok: false,
+      statusCode: error.response?.status && error.response.status < 600 ? error.response.status : 502,
+      message: typeof message === 'string' ? message : 'Failed to fetch CIBIL report.',
+      error: apiError,
+    }
   }
 }
 
@@ -926,6 +1168,7 @@ app.post(
       offerValidUntil,
       eSignConsent: req.body.eSignConsent === 'true',
       documents,
+      cibilReport: emptyCibilReport(),
       status: 'submitted',
       submittedAt: now,
       updatedAt: now,
@@ -995,6 +1238,11 @@ app.post(
       { expiresIn: '7d' },
     )
 
+    // Fire-and-forget CIBIL pull after authenticated loan application is created.
+    requestCibilForSubmission(submission, { triggeredBy: 'kyc_submit' }).catch((error) => {
+      console.error('Auto CIBIL request failed:', error?.message || error)
+    })
+
     return res.json({
       success: true,
       message: 'KYC submitted successfully. Account created.',
@@ -1061,6 +1309,7 @@ function buildApplicationSummary(submission) {
 
   return {
     ...normalized,
+    cibilReport: toPublicCibilReport(normalized.cibilReport),
     counts: {
       total: all.length,
       accepted,
@@ -1122,7 +1371,13 @@ function buildUserNotifications(application) {
 function buildUserProfileResponse(user) {
   const submissions = readSubmissions()
     .filter((item) => item.mobile === user.mobile)
-    .map(buildApplicationSummary)
+    .map((item) => {
+      const summary = buildApplicationSummary(item)
+      return {
+        ...summary,
+        canCheckCibil: isLoanApplicationActive(summary, user),
+      }
+    })
 
   const application =
     submissions.find((item) => item.id === user.kycId) || submissions[0] || null
@@ -1137,6 +1392,7 @@ function buildUserProfileResponse(user) {
     ...safeUser,
     applications: submissions,
     application,
+    cibilReport: toPublicCibilReport(application?.cibilReport || user.cibilReport),
     verifications: application?.verifications || user.verifications || { fields: {}, documents: {} },
     kycStatus: application?.status || safeUser.kycStatus || 'submitted',
     loanStatus:
@@ -1147,6 +1403,7 @@ function buildUserProfileResponse(user) {
     documents: application?.documents || user.documents || {},
     loanApproved,
     notifications,
+    canCheckCibil: isLoanApplicationActive(application, user),
   }
 }
 
@@ -1159,6 +1416,149 @@ app.get('/api/user/profile', requireUserAuth, (req, res) => {
   }
 
   return res.json({ success: true, data: buildUserProfileResponse(user) })
+})
+
+app.get('/api/user/cibil', requireUserAuth, (req, res) => {
+  const user = getUserByMobile(req.user.mobile)
+  if (!user) {
+    return res.status(404).json({ success: false, message: 'User profile not found.' })
+  }
+
+  const application = findActiveApplicationForMobile(req.user.mobile)
+  if (!application) {
+    return res.status(403).json({
+      success: false,
+      message: 'CIBIL report is only available while your loan application is in progress.',
+    })
+  }
+
+  return res.json({
+    success: true,
+    data: {
+      applicationId: application.id,
+      canCheckCibil: true,
+      cibilReport: toPublicCibilReport(application.cibilReport),
+    },
+  })
+})
+
+app.post('/api/user/cibil/request', requireUserAuth, async (req, res) => {
+  const user = getUserByMobile(req.user.mobile)
+  if (!user) {
+    return res.status(404).json({ success: false, message: 'User profile not found.' })
+  }
+
+  const application = findActiveApplicationForMobile(req.user.mobile)
+  if (!application) {
+    return res.status(403).json({
+      success: false,
+      message: 'CIBIL report can only be checked after login while your loan application is active.',
+    })
+  }
+
+  const consent = String(req.body?.consent || req.body?.Concent || 'Y').toUpperCase()
+  if (consent !== 'Y' && consent !== 'YES' && consent !== 'TRUE') {
+    return res.status(400).json({
+      success: false,
+      message: 'End-user consent is required to fetch the CIBIL report.',
+    })
+  }
+
+  const result = await requestCibilForSubmission(application, { triggeredBy: 'user' })
+  if (!result.ok) {
+    return res.status(result.statusCode || 502).json({
+      success: false,
+      message: result.message,
+      error: result.error,
+    })
+  }
+
+  return res.json({
+    success: true,
+    message: result.message,
+    data: {
+      applicationId: application.id,
+      cibilReport: result.data,
+    },
+  })
+})
+
+app.post('/api/admin/cibil/:id/request', requireAdminAuth, async (req, res) => {
+  const submissionId = String(req.params.id || '')
+  const submission = getSubmissionById(submissionId)
+  if (!submission) {
+    return res.status(404).json({ success: false, message: 'Submission not found.' })
+  }
+
+  const user = getUserByMobile(submission.mobile)
+  if (!isLoanApplicationActive(submission, user)) {
+    return res.status(403).json({
+      success: false,
+      message: 'CIBIL report is only available for users with an active loan application.',
+    })
+  }
+
+  const result = await requestCibilForSubmission(submission, { triggeredBy: 'admin' })
+  if (!result.ok) {
+    return res.status(result.statusCode || 502).json({
+      success: false,
+      message: result.message,
+      error: result.error,
+    })
+  }
+
+  const refreshed = getSubmissionById(submissionId)
+  return res.json({
+    success: true,
+    message: result.message,
+    data: {
+      ...normalizeSubmission(refreshed),
+      cibilReport: toPublicCibilReport(refreshed?.cibilReport),
+    },
+  })
+})
+
+app.get('/api/admin/cibil/:id', requireAdminAuth, (req, res) => {
+  const submission = getSubmissionById(String(req.params.id || ''))
+  if (!submission) {
+    return res.status(404).json({ success: false, message: 'Submission not found.' })
+  }
+
+  const user = getUserByMobile(submission.mobile)
+  return res.json({
+    success: true,
+    data: {
+      applicationId: submission.id,
+      canCheckCibil: isLoanApplicationActive(submission, user),
+      cibilReport: toPublicCibilReport(submission.cibilReport),
+    },
+  })
+})
+
+app.post('/api/cibil/callback', (req, res) => {
+  try {
+    const payload = req.body || {}
+    const submission = matchSubmissionFromCibilCallback(payload)
+    if (!submission) {
+      console.warn('CIBIL callback received but no matching submission found.')
+      return res.status(202).json({ success: true, message: 'Callback accepted.' })
+    }
+
+    const score = extractCibilScore(payload)
+    updateSubmissionCibil(submission.id, {
+      status: 'ready',
+      report: payload?.report || payload?.data || payload,
+      providerResponse: payload,
+      score,
+      summary: summarizeCibilPayload(payload),
+      error: null,
+    })
+
+    return res.json({ success: true, message: 'CIBIL callback processed.' })
+  } catch (error) {
+    console.error('CIBIL callback error:', error)
+    return res.status(500).json({ success: false, message: 'Failed to process CIBIL callback.' })
+  }
 })
 
 app.post('/api/user/loan/complete', requireUserAuth, (req, res) => {
@@ -1282,10 +1682,15 @@ app.patch('/api/admin/kyc/:id/status', requireAdminAuth, (req, res) => {
   writeSubmissions(submissions)
   syncUserFromSubmission(submissions[submissionIndex])
 
+  const updated = normalizeSubmission(submissions[submissionIndex])
   return res.json({
     success: true,
     message: `Submission marked as ${status}.`,
-    data: submissions[submissionIndex],
+    data: {
+      ...updated,
+      cibilReport: toPublicCibilReport(updated.cibilReport),
+      canCheckCibil: isLoanApplicationActive(updated, getUserByMobile(updated.mobile)),
+    },
   })
 })
 
@@ -1338,24 +1743,38 @@ app.patch('/api/admin/kyc/:id/item-status', requireAdminAuth, (req, res) => {
   writeSubmissions(submissions)
   syncUserFromSubmission(submissions[submissionIndex])
 
+  const updated = normalizeSubmission(submissions[submissionIndex])
   return res.json({
     success: true,
     message: `${type} "${key}" marked as ${status}.`,
-    data: submissions[submissionIndex],
+    data: {
+      ...updated,
+      cibilReport: toPublicCibilReport(updated.cibilReport),
+      canCheckCibil: isLoanApplicationActive(updated, getUserByMobile(updated.mobile)),
+    },
   })
 })
 
 app.get('/api/kyc/submissions', requireAdminAuth, (_req, res) => {
   const submissions = readSubmissions()
-  const normalized = submissions.map(normalizeSubmission)
-  const needsWrite = normalized.some((item, index) => {
+  const normalizedForStorage = submissions.map(normalizeSubmission)
+  const needsWrite = normalizedForStorage.some((item, index) => {
     const raw = submissions[index]
     return !raw.verifications || !raw.updatedAt || raw.status !== item.status
   })
   if (needsWrite) {
-    writeSubmissions(normalized)
+    writeSubmissions(normalizedForStorage)
   }
-  return res.json({ success: true, data: normalized })
+
+  const payload = (needsWrite ? normalizedForStorage : submissions).map((item) => {
+    const base = normalizeSubmission(item)
+    return {
+      ...base,
+      cibilReport: toPublicCibilReport(base.cibilReport),
+      canCheckCibil: isLoanApplicationActive(base, getUserByMobile(base.mobile)),
+    }
+  })
+  return res.json({ success: true, data: payload })
 })
 
 app.get('/uploads/:fileName', requireAdminAuth, (req, res) => {
@@ -1386,5 +1805,12 @@ app.listen(PORT, () => {
   )
   if (!MSG91_AUTH_KEY || !MSG91_TEMPLATE_ID) {
     console.warn('WARNING: MSG91_AUTH_KEY or MSG91_TEMPLATE_ID missing — OTP send/verify will fail.')
+  }
+  if (!TRUDETAILS_KEY) {
+    console.warn('WARNING: API_KEY / TRUDETAILS_API_KEY missing — CIBIL fetch will fail.')
+  } else if (!PUBLIC_BASE_URL && !CIBIL_CALLBACK_URL) {
+    console.warn(
+      'WARNING: PUBLIC_BASE_URL or CIBIL_CALLBACK_URL missing — TruDetails callback may not reach this server.',
+    )
   }
 })

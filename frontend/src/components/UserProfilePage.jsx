@@ -303,8 +303,10 @@ function ApplicationCard({ application, onOpen }) {
   )
 }
 
-function ApplicationDetail({ application, onBack }) {
+function ApplicationDetail({ application, userToken, onApplicationUpdate, onBack }) {
   const [activeTab, setActiveTab] = useState('all')
+  const [cibilLoading, setCibilLoading] = useState(false)
+  const [cibilError, setCibilError] = useState('')
   const items = useMemo(() => buildVerificationList(application), [application])
 
   const acceptedItems = items.filter((item) => item.status === 'accepted')
@@ -327,6 +329,39 @@ function ApplicationDetail({ application, onBack }) {
     accepted: acceptedItems.length,
     rejected: rejectedItems.length,
     pending: pendingItems.length,
+  }
+
+  const cibil = application?.cibilReport || {}
+  const canCheckCibil = Boolean(application?.canCheckCibil)
+
+  async function handleCheckCibil() {
+    if (!userToken) return
+    setCibilLoading(true)
+    setCibilError('')
+    try {
+      const response = await fetch(`${API_BASE}/api/user/cibil/request`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${userToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ consent: 'Y' }),
+      })
+      const data = await response.json()
+      if (response.ok && data.success) {
+        onApplicationUpdate?.({
+          ...application,
+          cibilReport: data.data?.cibilReport || cibil,
+          canCheckCibil: true,
+        })
+      } else {
+        setCibilError(data.message || 'Could not fetch CIBIL report.')
+      }
+    } catch {
+      setCibilError('Could not reach the server. Please try again.')
+    } finally {
+      setCibilLoading(false)
+    }
   }
 
   return (
@@ -358,6 +393,50 @@ function ApplicationDetail({ application, onBack }) {
           <StatusPill status={application.status || 'submitted'} />
         </div>
       </div>
+
+      {canCheckCibil ? (
+        <div className="rounded-none border border-slate-200 bg-white p-5 space-y-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="text-base font-semibold text-slate-900">CIBIL report</h3>
+              <p className="mt-1 text-sm text-slate-500">
+                Available after login while your loan application is in progress.
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={cibilLoading}
+              onClick={handleCheckCibil}
+              className="border border-slate-900 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-black disabled:opacity-60"
+            >
+              {cibilLoading ? 'Checking…' : cibil.status === 'ready' ? 'Refresh CIBIL' : 'Check CIBIL'}
+            </button>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="border border-slate-200 px-3 py-2">
+              <p className="text-[11px] uppercase tracking-wide text-slate-500">Status</p>
+              <p className="mt-1 text-sm font-semibold text-slate-900">{cibil.status || 'idle'}</p>
+            </div>
+            <div className="border border-slate-200 px-3 py-2">
+              <p className="text-[11px] uppercase tracking-wide text-slate-500">Score</p>
+              <p className="mt-1 text-sm font-semibold text-slate-900">
+                {cibil.score ?? cibil.summary?.score ?? '—'}
+              </p>
+            </div>
+            <div className="border border-slate-200 px-3 py-2">
+              <p className="text-[11px] uppercase tracking-wide text-slate-500">Updated</p>
+              <p className="mt-1 text-sm font-semibold text-slate-900">
+                {cibil.updatedAt ? formatDate(cibil.updatedAt) : '—'}
+              </p>
+            </div>
+          </div>
+          {cibil.error ? <p className="text-sm text-rose-600">{cibil.error}</p> : null}
+          {cibilError ? <p className="text-sm text-rose-600">{cibilError}</p> : null}
+          {cibil.status === 'pending' ? (
+            <p className="text-sm text-slate-500">Report requested. Refresh shortly if score is empty.</p>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="flex gap-2 overflow-x-auto border-b border-slate-200 pb-0">
         {DETAIL_TABS.map((tab) => {
@@ -538,7 +617,32 @@ function UserProfilePage({
 
       {selectedApplication ? (
         <ApplicationDetail
-          application={selectedApplication}
+          application={{
+            ...selectedApplication,
+            canCheckCibil:
+              selectedApplication.canCheckCibil ??
+              (profile?.canCheckCibil && selectedApplication.id === profile?.application?.id),
+          }}
+          userToken={userToken}
+          onApplicationUpdate={(nextApp) => {
+            setProfile((prev) => {
+              if (!prev) return prev
+              const applications = Array.isArray(prev.applications)
+                ? prev.applications.map((item) =>
+                    item.id === nextApp.id ? { ...item, ...nextApp } : item,
+                  )
+                : [nextApp]
+              return {
+                ...prev,
+                applications,
+                application:
+                  prev.application?.id === nextApp.id
+                    ? { ...prev.application, ...nextApp }
+                    : prev.application,
+                cibilReport: nextApp.cibilReport || prev.cibilReport,
+              }
+            })
+          }}
           onBack={() => setSelectedId(null)}
         />
       ) : (

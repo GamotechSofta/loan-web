@@ -78,6 +78,46 @@ class ApiService {
     }
   }
 
+  Future<ApiResult> getCibil(String token) async {
+    try {
+      final response = await _client.get(
+        _uri('/api/user/cibil'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      final body = _decode(response.body);
+      return ApiResult(
+        ok: response.statusCode >= 200 && response.statusCode < 300 && body['success'] == true,
+        message: body['message']?.toString(),
+        data: body['data'] is Map<String, dynamic> ? body['data'] as Map<String, dynamic> : null,
+        statusCode: response.statusCode,
+      );
+    } catch (_) {
+      return const ApiResult(ok: false, message: 'Could not reach the server. Please try again.');
+    }
+  }
+
+  Future<ApiResult> requestCibil(String token) async {
+    try {
+      final response = await _client.post(
+        _uri('/api/user/cibil/request'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'consent': 'Y'}),
+      );
+      final body = _decode(response.body);
+      return ApiResult(
+        ok: response.statusCode >= 200 && response.statusCode < 300 && body['success'] == true,
+        message: body['message']?.toString(),
+        data: body['data'] is Map<String, dynamic> ? body['data'] as Map<String, dynamic> : null,
+        statusCode: response.statusCode,
+      );
+    } catch (_) {
+      return const ApiResult(ok: false, message: 'Could not reach the server. Please try again.');
+    }
+  }
+
   Future<ApiResult> submitKyc({
     required Map<String, String> fields,
     required Map<String, PickedUpload?> files,

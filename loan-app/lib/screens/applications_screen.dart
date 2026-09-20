@@ -154,7 +154,11 @@ class _ProfileViewState extends State<ProfileView> {
         ),
         const SizedBox(height: 20),
         if (applications.isNotEmpty) ...[
-          _FullApplicationForm(application: applications.first),
+          _FullApplicationForm(
+            application: applications.first,
+            canCheckCibil: profile['canCheckCibil'] == true ||
+                (applications.first['canCheckCibil'] == true),
+          ),
           const SizedBox(height: 20),
         ],
         const SectionHeading('Your Applications'),
@@ -288,9 +292,13 @@ const _formSections = <(String, List<(String, String)>)>[
 ];
 
 class _FullApplicationForm extends StatelessWidget {
-  const _FullApplicationForm({required this.application});
+  const _FullApplicationForm({
+    required this.application,
+    required this.canCheckCibil,
+  });
 
   final Map application;
+  final bool canCheckCibil;
 
   @override
   Widget build(BuildContext context) {
@@ -355,6 +363,14 @@ class _FullApplicationForm extends StatelessWidget {
             ],
           ),
         ),
+        if (canCheckCibil) ...[
+          const SizedBox(height: 12),
+          _CibilReportCard(
+            initialReport: app['cibilReport'] is Map
+                ? Map<String, dynamic>.from(app['cibilReport'] as Map)
+                : const <String, dynamic>{},
+          ),
+        ],
         const SizedBox(height: 14),
         for (final section in _formSections) ...[
           AppCard(
@@ -487,6 +503,195 @@ class _FullApplicationForm extends StatelessWidget {
     final day = date.day.toString().padLeft(2, '0');
     final month = date.month.toString().padLeft(2, '0');
     return '$day/$month/${date.year}';
+  }
+}
+
+class _CibilReportCard extends StatefulWidget {
+  const _CibilReportCard({required this.initialReport});
+
+  final Map<String, dynamic> initialReport;
+
+  @override
+  State<_CibilReportCard> createState() => _CibilReportCardState();
+}
+
+class _CibilReportCardState extends State<_CibilReportCard> {
+  late Map<String, dynamic> _report;
+  bool _loading = false;
+  String _error = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _report = Map<String, dynamic>.from(widget.initialReport);
+  }
+
+  @override
+  void didUpdateWidget(covariant _CibilReportCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialReport != widget.initialReport) {
+      _report = Map<String, dynamic>.from(widget.initialReport);
+    }
+  }
+
+  Future<void> _checkCibil() async {
+    final state = context.read<AppState>();
+    if (state.userToken.isEmpty) return;
+    setState(() {
+      _loading = true;
+      _error = '';
+    });
+    final result = await state.api.requestCibil(state.userToken);
+    if (!mounted) return;
+    if (result.statusCode == 401 || result.statusCode == 403) {
+      setState(() {
+        _loading = false;
+        _error = result.message ?? 'CIBIL is only available during an active loan application.';
+      });
+      return;
+    }
+    if (result.ok) {
+      final data = result.data ?? const <String, dynamic>{};
+      final next = data['cibilReport'];
+      setState(() {
+        _loading = false;
+        _report = next is Map
+            ? Map<String, dynamic>.from(next)
+            : _report;
+      });
+      final profileResult = await state.api.getProfile(state.userToken);
+      if (mounted && profileResult.ok) {
+        state.setUserProfile(profileResult.data);
+      }
+    } else {
+      setState(() {
+        _loading = false;
+        _error = result.message ?? 'Could not fetch CIBIL report.';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final status = '${_report['status'] ?? 'idle'}';
+    final summary = _report['summary'] is Map
+        ? Map<String, dynamic>.from(_report['summary'] as Map)
+        : const <String, dynamic>{};
+    final score = _report['score'] ?? summary['score'];
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'CIBIL report',
+                  style: TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.slate900,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: _loading ? null : _checkCibil,
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.slate900,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                ),
+                child: Text(
+                  _loading
+                      ? 'Checking…'
+                      : status == 'ready'
+                          ? 'Refresh'
+                          : 'Check CIBIL',
+                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Available after login while your loan application is active.',
+            style: TextStyle(fontSize: 12, color: AppColors.slate500),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(child: _CibilStat(label: 'Status', value: status)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _CibilStat(
+                  label: 'Score',
+                  value: score == null ? '—' : '$score',
+                ),
+              ),
+            ],
+          ),
+          if (_error.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(_error, style: const TextStyle(fontSize: 12, color: Color(0xFFBE123C))),
+          ],
+          if ((_report['error'] ?? '').toString().isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              '${_report['error']}',
+              style: const TextStyle(fontSize: 12, color: Color(0xFFBE123C)),
+            ),
+          ],
+          if (status == 'pending') ...[
+            const SizedBox(height: 8),
+            const Text(
+              'Report requested. Pull to refresh if the score is still empty.',
+              style: TextStyle(fontSize: 12, color: AppColors.slate500),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CibilStat extends StatelessWidget {
+  const _CibilStat({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        border: Border.all(color: AppColors.line),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label.toUpperCase(),
+            style: const TextStyle(
+              fontSize: 10,
+              letterSpacing: 0.4,
+              color: AppColors.slate500,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w700,
+              color: AppColors.slate900,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

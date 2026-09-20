@@ -381,11 +381,16 @@ function VerificationDetail({
   onBack,
   onItemStatusChange,
   onOverallStatusChange,
+  onCibilRequest,
+  cibilLoading,
+  cibilError,
 }) {
   const progress = countItemProgress(submission)
   const docs = submission.documents || {}
   const fieldStatuses = submission.verifications?.fields || {}
   const docStatuses = submission.verifications?.documents || {}
+  const cibil = submission.cibilReport || {}
+  const canCheckCibil = Boolean(submission.canCheckCibil)
 
   return (
     <div className="space-y-6">
@@ -466,6 +471,68 @@ function VerificationDetail({
           ))}
         </div>
       </div>
+
+      <section className="border border-slate-200 bg-white">
+        <div className="border-b border-slate-200 px-5 py-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h3 className="text-base font-semibold text-slate-900">CIBIL report</h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Available only while this applicant has an active loan application.
+            </p>
+          </div>
+          {canCheckCibil ? (
+            <button
+              type="button"
+              disabled={cibilLoading || Boolean(updatingKey)}
+              onClick={() => onCibilRequest(submission.id)}
+              className="rounded-md border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-black disabled:opacity-60"
+            >
+              {cibilLoading ? 'Fetching…' : cibil.status === 'ready' ? 'Refresh CIBIL' : 'Check CIBIL'}
+            </button>
+          ) : null}
+        </div>
+        <div className="px-5 py-4 space-y-3 text-sm">
+          {!canCheckCibil ? (
+            <p className="text-slate-500">
+              CIBIL is locked because this loan application is no longer active.
+            </p>
+          ) : (
+            <>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="border border-slate-200 px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Status</p>
+                  <p className="mt-1 font-semibold text-slate-900">{cibil.status || 'idle'}</p>
+                </div>
+                <div className="border border-slate-200 px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Score</p>
+                  <p className="mt-1 font-semibold text-slate-900">
+                    {cibil.score ?? cibil.summary?.score ?? '—'}
+                  </p>
+                </div>
+                <div className="border border-slate-200 px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Updated</p>
+                  <p className="mt-1 font-semibold text-slate-900">
+                    {cibil.updatedAt ? formatDate(cibil.updatedAt) : '—'}
+                  </p>
+                </div>
+              </div>
+              {cibil.error ? <p className="text-rose-600">{cibil.error}</p> : null}
+              {cibilError ? <p className="text-rose-600">{cibilError}</p> : null}
+              {cibil.report ? (
+                <pre className="max-h-72 overflow-auto border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+                  {JSON.stringify(cibil.report, null, 2)}
+                </pre>
+              ) : cibil.status === 'pending' ? (
+                <p className="text-slate-500">
+                  Report requested. Waiting for provider callback or refresh.
+                </p>
+              ) : (
+                <p className="text-slate-500">No CIBIL report fetched yet.</p>
+              )}
+            </>
+          )}
+        </div>
+      </section>
 
       <section className="border border-slate-200 bg-white">
         <div className="border-b border-slate-200 px-5 py-4">
@@ -549,6 +616,8 @@ function Dashboard({ token, onLogout }) {
   const [searchTerm, setSearchTerm] = useState('')
   const [activeFilter, setActiveFilter] = useState('not_verified')
   const [updatingKey, setUpdatingKey] = useState(null)
+  const [cibilLoading, setCibilLoading] = useState(false)
+  const [cibilError, setCibilError] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     const stored = localStorage.getItem('admin_sidebar_open')
     return stored === null ? true : stored === 'true'
@@ -679,6 +748,48 @@ function Dashboard({ token, onLogout }) {
       setError('Could not update verification item.')
     } finally {
       setUpdatingKey(null)
+    }
+  }
+
+  async function handleCibilRequest(submissionId) {
+    setCibilLoading(true)
+    setCibilError('')
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/cibil/${submissionId}/request`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
+      })
+      const data = await response.json()
+
+      if (response.status === 401 || response.status === 403) {
+        onLogout()
+        return
+      }
+
+      if (response.ok && data.success) {
+        setSubmissions((prev) =>
+          prev.map((item) =>
+            item.id === submissionId
+              ? {
+                  ...item,
+                  ...data.data,
+                  canCheckCibil: true,
+                }
+              : item,
+          ),
+        )
+        await fetchDashboardData({ silent: true })
+      } else {
+        setCibilError(data.message || 'Failed to fetch CIBIL report.')
+      }
+    } catch {
+      setCibilError('Could not reach the server for CIBIL fetch.')
+    } finally {
+      setCibilLoading(false)
     }
   }
 
@@ -833,6 +944,9 @@ function Dashboard({ token, onLogout }) {
                 onBack={() => setSelectedId(null)}
                 onItemStatusChange={handleItemStatusChange}
                 onOverallStatusChange={handleOverallStatusChange}
+                onCibilRequest={handleCibilRequest}
+                cibilLoading={cibilLoading}
+                cibilError={cibilError}
               />
             ) : (
               <>
