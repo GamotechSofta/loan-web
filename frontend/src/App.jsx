@@ -40,6 +40,21 @@ function App() {
   const [checkingSession, setCheckingSession] = useState(Boolean(localStorage.getItem(USER_TOKEN_KEY)))
   const [showSignIn, setShowSignIn] = useState(false)
   const [showWelcomePopup, setShowWelcomePopup] = useState(false)
+  const [requestedPage, setRequestedPage] = useState('')
+
+  async function handleSignedIn({ token, user }) {
+    localStorage.setItem(USER_TOKEN_KEY, token)
+    setUserToken(token)
+    setUserProfile(user)
+    setShowSignIn(false)
+    setAppMode('website')
+    setShowWelcomePopup(true)
+    try {
+      await loadUserProfile(token)
+    } catch {
+      // Keep signed-in user from the auth response
+    }
+  }
 
   const cleanedMobile = mobileNumber.replace(/\D/g, '').slice(0, 10)
   const isMobileValid = cleanedMobile.length === 10
@@ -163,24 +178,20 @@ function App() {
           onViewProfile={() => setAppMode('profile')}
           onLeaveProfile={() => setAppMode('website')}
           onSignIn={() => setShowSignIn(true)}
+          onSignedUp={handleSignedIn}
           onLogout={clearUserSession}
           onProfileRefresh={setUserProfile}
+          requestedPage={requestedPage}
+          onRequestedPageConsumed={() => setRequestedPage('')}
         />
         {showSignIn && !userProfile ? (
           <UserSignInModal
             onClose={() => setShowSignIn(false)}
-            onSignedIn={async ({ token, user }) => {
-              localStorage.setItem(USER_TOKEN_KEY, token)
-              setUserToken(token)
-              setUserProfile(user)
+            onSignedIn={handleSignedIn}
+            onCreateAccount={() => {
               setShowSignIn(false)
               setAppMode('website')
-              setShowWelcomePopup(true)
-              try {
-                await loadUserProfile(token)
-              } catch {
-                // Keep signed-in user from login response
-              }
+              setRequestedPage('signup')
             }}
           />
         ) : null}

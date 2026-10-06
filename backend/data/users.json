@@ -1,5 +1,19 @@
 [
   {
+    "id": "USR-1791282914075",
+    "createdAt": "2026-10-06T10:35:14.075Z",
+    "updatedAt": "2026-10-06T10:35:14.075Z",
+    "mobile": "9022646393",
+    "fullName": "Nikhil Pramod Mathure",
+    "email": "digitalbuddiesspune@gmail.com",
+    "username": "9022646393",
+    "passwordHash": "413355fa3579620c27b2ad1e1798363a:44518f52809d9d4b52ddf29f976d517a8777b58a04abda7f6a12c93860a764c26252765c5c42915233b05ff122d4e29bae69d11fb6c03d32fcec3b4d7b019380",
+    "kycStatus": "registered",
+    "loanStatus": "none",
+    "documents": {},
+    "disbursedAmount": 0
+  },
+  {
     "id": "USR-1785413834024",
     "createdAt": "2026-07-30T12:17:14.024Z",
     "updatedAt": "2026-09-20T14:54:52.299Z",

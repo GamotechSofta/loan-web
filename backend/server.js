@@ -915,6 +915,70 @@ app.post('/api/otp/verify', async (req, res) => {
   })
 })
 
+app.post('/api/user/signup', (req, res) => {
+  const fullName = String(req.body?.fullName || '').trim()
+  const mobile = normalizeIndianMobile(req.body?.mobile)
+  const email = String(req.body?.email || '').trim().toLowerCase()
+  const password = String(req.body?.password || '')
+
+  if (fullName.length < 2) {
+    return res.status(400).json({ success: false, message: 'Please enter your full name.' })
+  }
+  if (!mobile) {
+    return res.status(400).json({
+      success: false,
+      message: 'Please provide a valid 10 digit mobile number.',
+    })
+  }
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ success: false, message: 'Please enter a valid email address.' })
+  }
+  if (password.length < 6) {
+    return res.status(400).json({
+      success: false,
+      message: 'Password must be at least 6 characters.',
+    })
+  }
+
+  if (getUserByMobile(mobile) || getLatestSubmissionByMobile(mobile)) {
+    return res.status(409).json({
+      success: false,
+      message: 'An account already exists for this mobile number. Please sign in.',
+    })
+  }
+
+  const emailTaken = readUsers().some(
+    (user) => String(user.email || '').trim().toLowerCase() === email,
+  )
+  if (emailTaken) {
+    return res.status(409).json({
+      success: false,
+      message: 'An account already exists for this email address. Please sign in.',
+    })
+  }
+
+  const user = upsertUserProfile({
+    mobile,
+    fullName,
+    email,
+    username: mobile,
+    passwordHash: hashPassword(password),
+    kycStatus: 'registered',
+    loanStatus: 'none',
+    documents: {},
+    disbursedAmount: 0,
+  })
+
+  return res.status(201).json({
+    success: true,
+    message: 'Account created successfully.',
+    data: {
+      token: issueUserToken(user),
+      user: buildUserProfileResponse(user),
+    },
+  })
+})
+
 app.post('/api/user/login/send-otp', async (req, res) => {
   const mobile = normalizeIndianMobile(req.body?.mobile)
   if (!mobile) {
@@ -927,7 +991,7 @@ app.post('/api/user/login/send-otp', async (req, res) => {
   if (!user) {
     return res.status(404).json({
       success: false,
-      message: 'No account found for this mobile number. Please apply for a loan first.',
+      message: 'No account found for this mobile number. Please sign up first.',
     })
   }
 
@@ -1003,7 +1067,7 @@ function loginWithPasswordHandler(req, res) {
   if (!user) {
     return res.status(404).json({
       success: false,
-      message: 'No account found for this mobile number. Please apply for a loan first.',
+      message: 'No account found for this mobile number. Please sign up first.',
     })
   }
 

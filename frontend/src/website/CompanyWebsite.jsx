@@ -6,6 +6,8 @@ import ServicesPage from './pages/ServicesPage'
 import CsrPage from './pages/CsrPage'
 import ContactPage from './pages/ContactPage'
 import PrivacyPage from './pages/PrivacyPage'
+import CibilPage from './pages/CibilPage'
+import SignUpPage from './pages/SignUpPage'
 import UserProfilePage from '../components/UserProfilePage'
 
 function CompanyWebsite({
@@ -16,8 +18,11 @@ function CompanyWebsite({
   onViewProfile,
   onLeaveProfile,
   onSignIn,
+  onSignedUp,
   onLogout,
   onProfileRefresh,
+  requestedPage,
+  onRequestedPageConsumed,
 }) {
   const [currentPage, setCurrentPage] = useState(profileMode ? 'profile' : 'home')
 
@@ -26,6 +31,15 @@ function CompanyWebsite({
       setCurrentPage('profile')
     }
   }, [profileMode])
+
+  useEffect(() => {
+    if (!requestedPage) return
+    setCurrentPage(requestedPage)
+    if (requestedPage !== 'profile') {
+      onLeaveProfile?.()
+    }
+    onRequestedPageConsumed?.()
+  }, [requestedPage, onLeaveProfile, onRequestedPageConsumed])
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -72,6 +86,27 @@ function CompanyWebsite({
         return <ContactPage />
       case 'privacy':
         return <PrivacyPage />
+      case 'cibil':
+        return (
+          <CibilPage
+            userProfile={userProfile}
+            userToken={userToken}
+            onSignIn={onSignIn}
+            onApplyNow={onApplyNow}
+          />
+        )
+      case 'signup':
+        return (
+          <SignUpPage
+            userProfile={userProfile}
+            onSignIn={onSignIn}
+            onViewProfile={handleViewProfile}
+            onSignedUp={(payload) => {
+              setCurrentPage('home')
+              onSignedUp?.(payload)
+            }}
+          />
+        )
       default:
         return <HomePage {...commonProps} />
     }

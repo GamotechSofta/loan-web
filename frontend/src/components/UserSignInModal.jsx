@@ -5,7 +5,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
 const OTP_LENGTH = 6
 const RESEND_SECONDS = 60
 
-function UserSignInModal({ onClose, onSignedIn }) {
+function UserSignInModal({ onClose, onSignedIn, onCreateAccount }) {
   const [mode, setMode] = useState('password') // 'password' | 'otp'
   const [otpStep, setOtpStep] = useState('mobile') // 'mobile' | 'otp'
   const [mobile, setMobile] = useState('')
@@ -391,6 +391,19 @@ function UserSignInModal({ onClose, onSignedIn }) {
             </button>
           </div>
         )}
+
+        {onCreateAccount ? (
+          <p className="mt-5 text-center text-sm text-slate-500">
+            New here?{' '}
+            <button
+              type="button"
+              onClick={onCreateAccount}
+              className="font-semibold text-[var(--navy)] hover:underline"
+            >
+              Create an account
+            </button>
+          </p>
+        ) : null}
       </div>
     </>
   )

@@ -65,13 +65,13 @@ export function WebsiteLayout({
             />
           </button>
 
-          <nav className="hidden items-center gap-1 lg:flex">
+          <nav className="hidden items-center gap-0.5 lg:flex">
             {NAV_ITEMS.map((item) => (
               <button
                 key={item.id}
                 type="button"
                 onClick={() => onNavigate(item.id)}
-                className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                className={`rounded-lg px-2 py-2 text-sm font-medium transition ${
                   currentPage === item.id
                     ? 'bg-[var(--brand-soft)] text-[var(--navy)]'
                     : 'text-black/70 hover:bg-black/5'
@@ -83,6 +83,17 @@ export function WebsiteLayout({
           </nav>
 
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => goTo('cibil')}
+              className={`inline-flex items-center rounded-lg border px-2.5 py-2 text-xs font-semibold transition sm:px-3 sm:text-sm ${
+                currentPage === 'cibil'
+                  ? 'border-[var(--navy)] bg-[var(--navy)] text-white'
+                  : 'border-[var(--navy)] text-[var(--navy)] hover:bg-[var(--brand-soft)]'
+              }`}
+            >
+              Check CIBIL
+            </button>
             {userProfile ? (
               <>
                 <NotificationBell profile={userProfile} onViewProfile={onViewProfile} />
@@ -119,13 +130,24 @@ export function WebsiteLayout({
                 </button>
               </>
             ) : (
-              <button
-                type="button"
-                onClick={onSignIn}
-                className="hidden rounded-lg border border-[var(--navy)] px-3 py-2 text-sm font-medium text-[var(--navy)] hover:bg-[var(--brand-soft)] lg:inline-flex"
-              >
-                Sign In
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={onSignIn}
+                  className="hidden rounded-lg border border-[var(--navy)] px-3 py-2 text-sm font-medium text-[var(--navy)] hover:bg-[var(--brand-soft)] lg:inline-flex"
+                >
+                  Sign In
+                </button>
+                <button
+                  type="button"
+                  onClick={() => goTo('signup')}
+                  className={`hidden rounded-lg px-3 py-2 text-sm font-semibold text-white lg:inline-flex ${
+                    currentPage === 'signup' ? 'bg-black' : 'bg-[var(--navy)] hover:bg-black'
+                  }`}
+                >
+                  Sign Up
+                </button>
+              </>
             )}
 
             {!userProfile && (
@@ -238,6 +260,17 @@ export function WebsiteLayout({
           ) : null}
 
           <nav className="flex flex-1 flex-col overflow-y-auto px-3 py-3">
+            <button
+              type="button"
+              onClick={() => goTo('cibil')}
+              className={`mb-2 rounded-xl px-4 py-3.5 text-left text-sm font-semibold transition ${
+                currentPage === 'cibil'
+                  ? 'bg-[var(--navy)] text-white'
+                  : 'border border-[var(--navy)] text-[var(--navy)] hover:bg-[var(--brand-soft)]'
+              }`}
+            >
+              Check CIBIL
+            </button>
             {NAV_ITEMS.map((item) => (
               <button
                 key={item.id}
@@ -283,14 +316,12 @@ export function WebsiteLayout({
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setMenuOpen(false)
-                    onApplyNow()
-                  }}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--gold)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#9a7234]"
+                  onClick={() => goTo('signup')}
+                  className={`w-full rounded-2xl px-4 py-3 text-sm font-semibold text-white transition ${
+                    currentPage === 'signup' ? 'bg-black' : 'bg-[var(--navy)] hover:bg-black'
+                  }`}
                 >
                   Sign Up
-                  <Icon name="arrow" className="h-4 w-4" />
                 </button>
               </div>
             )}
