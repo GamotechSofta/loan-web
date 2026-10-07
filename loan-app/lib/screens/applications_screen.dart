@@ -38,172 +38,184 @@ class _ProfileViewState extends State<ProfileView> {
     final state = context.watch<AppState>();
     final profile = state.userProfile ?? const <String, dynamic>{};
     final raw = profile['applications'];
-    final applications =
-        raw is List ? raw.whereType<Map>().toList() : const <Map>[];
+    final applications = raw is List
+        ? raw.whereType<Map>().toList()
+        : const <Map>[];
 
     return RefreshIndicator(
       onRefresh: _refresh,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-        children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Profile',
-                    style: TextStyle(
-                      fontSize: 21,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.slate900,
-                    ),
-                  ),
-                  SizedBox(height: 3),
-                  Text(
-                    'Your account and loan history',
-                    style: TextStyle(fontSize: 12.5, color: AppColors.slate500),
-                  ),
-                ],
-              ),
-            ),
-            TextButton.icon(
-              onPressed: state.clearUserSession,
-              style: TextButton.styleFrom(foregroundColor: AppColors.slate500),
-              icon: const Icon(Icons.logout_rounded, size: 16),
-              label: const Text('Logout', style: TextStyle(fontSize: 13)),
-            ),
-          ],
+        padding: EdgeInsets.fromLTRB(
+          20,
+          16,
+          20,
+          24 + MediaQuery.paddingOf(context).bottom,
         ),
-        const SizedBox(height: 16),
-        AppCard(
-          child: Column(
+        children: [
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: AppColors.brandSoft,
-                      borderRadius: BorderRadius.circular(12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Profile',
+                      style: TextStyle(
+                        fontSize: 21,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.slate900,
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.person_outline_rounded,
-                      color: AppColors.brand,
+                    SizedBox(height: 3),
+                    Text(
+                      'Your account and loan history',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: AppColors.slate500,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${profile['fullName'] ?? '—'}',
-                          style: const TextStyle(
-                            fontSize: 15.5,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.slate900,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '+91 ${profile['mobile'] ?? '—'}',
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            color: AppColors.slate500,
-                          ),
-                        ),
-                        if ('${profile['email'] ?? ''}'.isNotEmpty)
+                  ],
+                ),
+              ),
+              TextButton.icon(
+                onPressed: state.clearUserSession,
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.slate500,
+                ),
+                icon: const Icon(Icons.logout_rounded, size: 16),
+                label: const Text('Logout', style: TextStyle(fontSize: 13)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: AppColors.brandSoft,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.person_outline_rounded,
+                        color: AppColors.brand,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            '${profile['email']}',
+                            '${profile['fullName'] ?? '—'}',
+                            style: const TextStyle(
+                              fontSize: 15.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.slate900,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '+91 ${profile['mobile'] ?? '—'}',
                             style: const TextStyle(
                               fontSize: 12.5,
                               color: AppColors.slate500,
                             ),
                           ),
-                      ],
+                          if ('${profile['email'] ?? ''}'.isNotEmpty)
+                            Text(
+                              '${profile['email']}',
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                color: AppColors.slate500,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                const Divider(height: 1),
+                const SizedBox(height: 6),
+                DetailRow(
+                  label: 'KYC Status',
+                  value:
+                      '${profile['kycStatus'] ?? profile['applicationStatus'] ?? '—'}',
+                ),
+                DetailRow(
+                  label: 'Loan Status',
+                  value: '${profile['loanStatus'] ?? '—'}',
+                ),
+                if (profile['loanAmount'] != null)
+                  DetailRow(
+                    label: 'Loan Amount',
+                    value: formatCurrency(profile['loanAmount'] as num),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          if (applications.isNotEmpty) ...[
+            _FullApplicationForm(
+              application: applications.first,
+              canCheckCibil:
+                  profile['canCheckCibil'] == true ||
+                  (applications.first['canCheckCibil'] == true),
+            ),
+            const SizedBox(height: 20),
+          ],
+          const SectionHeading('Your Applications'),
+          const SizedBox(height: 10),
+          if (applications.isEmpty)
+            AppCard(
+              child: Column(
+                children: [
+                  const Icon(
+                    Icons.inbox_outlined,
+                    size: 30,
+                    color: AppColors.slate300,
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'No applications yet',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.slate700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Apply for a loan to see it listed here.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 12.5, color: AppColors.slate500),
+                  ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: state.startApplication,
+                      child: const Text('Apply for Loan'),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 14),
-              const Divider(height: 1),
-              const SizedBox(height: 6),
-              DetailRow(
-                label: 'KYC Status',
-                value:
-                    '${profile['kycStatus'] ?? profile['applicationStatus'] ?? '—'}',
+            )
+          else
+            for (final item in applications)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _ApplicationTile(application: item),
               ),
-              DetailRow(
-                label: 'Loan Status',
-                value: '${profile['loanStatus'] ?? '—'}',
-              ),
-              if (profile['loanAmount'] != null)
-                DetailRow(
-                  label: 'Loan Amount',
-                  value: formatCurrency(profile['loanAmount'] as num),
-                ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-        if (applications.isNotEmpty) ...[
-          _FullApplicationForm(
-            application: applications.first,
-            canCheckCibil: profile['canCheckCibil'] == true ||
-                (applications.first['canCheckCibil'] == true),
-          ),
-          const SizedBox(height: 20),
-        ],
-        const SectionHeading('Your Applications'),
-        const SizedBox(height: 10),
-        if (applications.isEmpty)
-          AppCard(
-            child: Column(
-              children: [
-                const Icon(
-                  Icons.inbox_outlined,
-                  size: 30,
-                  color: AppColors.slate300,
-                ),
-                const SizedBox(height: 10),
-                const Text(
-                  'No applications yet',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.slate700,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Apply for a loan to see it listed here.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12.5, color: AppColors.slate500),
-                ),
-                const SizedBox(height: 14),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: state.startApplication,
-                    child: const Text('Apply for Loan'),
-                  ),
-                ),
-              ],
-            ),
-          )
-        else
-          for (final item in applications)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _ApplicationTile(application: item),
-            ),
         ],
       ),
     );
@@ -444,12 +456,14 @@ class _FullApplicationForm extends StatelessWidget {
 
   static String _statusMessage(String status) {
     return switch (status) {
-      'verified' => 'Approved by admin. All submitted details have been verified.',
+      'verified' =>
+        'Approved by admin. All submitted details have been verified.',
       'rejected' =>
         'Action is required. Review the rejected items shown below.',
       'in_review' =>
         'Admin review is in progress. Individual item decisions are shown below.',
-      _ => 'Pending admin review. Your application is visible in the admin panel.',
+      _ =>
+        'Pending admin review. Your application is visible in the admin panel.',
     };
   }
 
@@ -546,7 +560,9 @@ class _CibilReportCardState extends State<_CibilReportCard> {
     if (result.statusCode == 401 || result.statusCode == 403) {
       setState(() {
         _loading = false;
-        _error = result.message ?? 'CIBIL is only available during an active loan application.';
+        _error =
+            result.message ??
+            'CIBIL is only available during an active loan application.';
       });
       return;
     }
@@ -555,9 +571,7 @@ class _CibilReportCardState extends State<_CibilReportCard> {
       final next = data['cibilReport'];
       setState(() {
         _loading = false;
-        _report = next is Map
-            ? Map<String, dynamic>.from(next)
-            : _report;
+        _report = next is Map ? Map<String, dynamic>.from(next) : _report;
       });
       final profileResult = await state.api.getProfile(state.userToken);
       if (mounted && profileResult.ok) {
@@ -605,9 +619,12 @@ class _CibilReportCardState extends State<_CibilReportCard> {
                   _loading
                       ? 'Checking…'
                       : status == 'ready'
-                          ? 'Refresh'
-                          : 'Check CIBIL',
-                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                      ? 'Refresh'
+                      : 'Check CIBIL',
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ],
@@ -620,7 +637,9 @@ class _CibilReportCardState extends State<_CibilReportCard> {
           const SizedBox(height: 10),
           Row(
             children: [
-              Expanded(child: _CibilStat(label: 'Status', value: status)),
+              Expanded(
+                child: _CibilStat(label: 'Status', value: status),
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: _CibilStat(
@@ -632,7 +651,10 @@ class _CibilReportCardState extends State<_CibilReportCard> {
           ),
           if (_error.isNotEmpty) ...[
             const SizedBox(height: 8),
-            Text(_error, style: const TextStyle(fontSize: 12, color: Color(0xFFBE123C))),
+            Text(
+              _error,
+              style: const TextStyle(fontSize: 12, color: Color(0xFFBE123C)),
+            ),
           ],
           if ((_report['error'] ?? '').toString().isNotEmpty) ...[
             const SizedBox(height: 8),

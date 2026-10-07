@@ -11,7 +11,12 @@ class SupportView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+      padding: EdgeInsets.fromLTRB(
+        20,
+        16,
+        20,
+        24 + MediaQuery.paddingOf(context).bottom,
+      ),
       children: [
         const Text(
           'Support',
@@ -123,7 +128,10 @@ class _ContactTile extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(fontSize: 11.5, color: AppColors.slate500),
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: AppColors.slate500,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(

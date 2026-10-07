@@ -191,8 +191,12 @@ class _CompleteKycScreenState extends State<CompleteKycScreen> {
     add(getRequiredError(_nomineeRelation.text, 'Nominee relation'));
     add(getMobileError(_nomineeMobile.text, label: 'Nominee mobile'));
     add(getRequiredError(_emergencyName.text, 'Emergency contact name'));
-    add(getRequiredError(_emergencyRelation.text, 'Emergency contact relation'));
-    add(getMobileError(_emergencyMobile.text, label: 'Emergency contact mobile'));
+    add(
+      getRequiredError(_emergencyRelation.text, 'Emergency contact relation'),
+    );
+    add(
+      getMobileError(_emergencyMobile.text, label: 'Emergency contact mobile'),
+    );
     add(getRequiredError(_ref1Name.text, 'Reference 1 name'));
     add(getMobileError(_ref1Mobile.text, label: 'Reference 1 mobile'));
     add(getRequiredError(_ref2Name.text, 'Reference 2 name'));
@@ -434,12 +438,15 @@ class _CompleteKycScreenState extends State<CompleteKycScreen> {
     final validationErrors = _collectValidationErrors();
     final dobError = _fieldError('dob', () => getDobError(_dob));
     final genderError = _fieldError('gender', () => getGenderError(_gender));
-    final aadhaarError =
-        _fieldError('aadhaar', () => getAadhaarError(_aadhaar.text));
+    final aadhaarError = _fieldError(
+      'aadhaar',
+      () => getAadhaarError(_aadhaar.text),
+    );
     final panError = _fieldError('pan', () => getPanError(_pan.text));
     final photoError = _fieldError(
       'photograph',
-      () => _files['photograph'] == null ? 'Profile photograph is required.' : '',
+      () =>
+          _files['photograph'] == null ? 'Profile photograph is required.' : '',
     );
     final signatureError = _fieldError(
       'signature',
@@ -463,491 +470,510 @@ class _CompleteKycScreenState extends State<CompleteKycScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-          if (_error.isNotEmpty)
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.red50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFFECACA)),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.error_outline, size: 18, color: AppColors.red600),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _error,
-                      style: const TextStyle(
-                        color: AppColors.red600,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
+            if (_error.isNotEmpty)
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.red50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFFECACA)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 18,
+                      color: AppColors.red600,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _error,
+                        style: const TextStyle(
+                          color: AppColors.red600,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
+                    ),
+                  ],
+                ),
+              )
+            else if (validationErrors.isNotEmpty)
+              ValidationChecklist(errors: validationErrors),
+            SectionCard(
+              title: 'Personal Details',
+              child: Column(
+                children: [
+                  _field('fullName', 'Full Name', _fullName),
+                  _field('parentName', "Parent's / Spouse Name", _parentName),
+                  FloatingLabelField(
+                    label: 'Date of Birth',
+                    errorText: dobError,
+                    child: InkWell(
+                      onTap: _pickDob,
+                      child: InputDecorator(
+                        decoration: errorAwareDecoration(
+                          hasError: dobError != null,
+                        ),
+                        child: Text(
+                          _dob == null
+                              ? 'Select date'
+                              : '${_dob!.day.toString().padLeft(2, '0')}/${_dob!.month.toString().padLeft(2, '0')}/${_dob!.year}',
+                          style: TextStyle(
+                            color: _dob == null
+                                ? AppColors.slate400
+                                : AppColors.slate700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  FloatingLabelField(
+                    label: 'Gender',
+                    errorText: genderError,
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _gender.isEmpty ? null : _gender,
+                      hint: const Text('Select gender'),
+                      items: const [
+                        DropdownMenuItem(value: 'male', child: Text('Male')),
+                        DropdownMenuItem(
+                          value: 'female',
+                          child: Text('Female'),
+                        ),
+                        DropdownMenuItem(value: 'other', child: Text('Other')),
+                        DropdownMenuItem(
+                          value: 'prefer_not_to_say',
+                          child: Text('Prefer not to say'),
+                        ),
+                      ],
+                      onChanged: (v) => setState(() {
+                        _gender = v ?? '';
+                        _touched['gender'] = true;
+                      }),
+                      decoration: errorAwareDecoration(
+                        hasError: genderError != null,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  FloatingLabelField(
+                    label: 'Mobile',
+                    child: TextField(
+                      enabled: false,
+                      controller: _mobileDisplay,
+                      decoration: errorAwareDecoration(
+                        fillColor: AppColors.slate100,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _field(
+                    'email',
+                    'Email',
+                    _email,
+                    type: TextInputType.emailAddress,
+                    validator: getEmailError,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            SectionCard(
+              title: 'Address',
+              child: Column(
+                children: [
+                  _field(
+                    'residential',
+                    'Residential Address',
+                    _residential,
+                    onChanged: () {
+                      if (_sameAsResidential) {
+                        _permanent.text = _residential.text;
+                      }
+                    },
+                  ),
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: _sameAsResidential,
+                        onChanged: (v) {
+                          setState(() {
+                            _sameAsResidential = v ?? false;
+                            if (_sameAsResidential) {
+                              _permanent.text = _residential.text;
+                              _touched['permanent'] = true;
+                            }
+                          });
+                        },
+                      ),
+                      const Expanded(
+                        child: Text('Permanent address same as residential'),
+                      ),
+                    ],
+                  ),
+                  _field('permanent', 'Permanent Address', _permanent),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            SectionCard(
+              title: 'Occupation',
+              child: Column(
+                children: [
+                  _field('occupation', 'Occupation', _occupation),
+                  _field('income', 'Income Details', _income),
+                  _field('employer', 'Employer Details', _employer),
+                  _field('education', 'Educational Info', _education),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            SectionCard(
+              title: 'Nominee',
+              child: Column(
+                children: [
+                  _field('nomineeName', 'Nominee Name', _nomineeName),
+                  _field('nomineeRelation', 'Relation', _nomineeRelation),
+                  _field(
+                    'nomineeMobile',
+                    'Nominee Mobile',
+                    _nomineeMobile,
+                    type: TextInputType.phone,
+                    max: 10,
+                    formatters: [FilteringTextInputFormatter.digitsOnly],
+                    validator: (v) =>
+                        getMobileError(v, label: 'Nominee mobile'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            SectionCard(
+              title: 'Emergency Contact',
+              child: Column(
+                children: [
+                  _field('emergencyName', 'Name', _emergencyName),
+                  _field('emergencyRelation', 'Relation', _emergencyRelation),
+                  _field(
+                    'emergencyMobile',
+                    'Mobile',
+                    _emergencyMobile,
+                    type: TextInputType.phone,
+                    max: 10,
+                    formatters: [FilteringTextInputFormatter.digitsOnly],
+                    validator: (v) =>
+                        getMobileError(v, label: 'Emergency contact mobile'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            SectionCard(
+              title: 'References',
+              child: Column(
+                children: [
+                  _field('ref1Name', 'Reference 1 Name', _ref1Name),
+                  _field(
+                    'ref1Mobile',
+                    'Reference 1 Mobile',
+                    _ref1Mobile,
+                    type: TextInputType.phone,
+                    max: 10,
+                    formatters: [FilteringTextInputFormatter.digitsOnly],
+                    validator: (v) =>
+                        getMobileError(v, label: 'Reference 1 mobile'),
+                  ),
+                  _field('ref2Name', 'Reference 2 Name', _ref2Name),
+                  _field(
+                    'ref2Mobile',
+                    'Reference 2 Mobile',
+                    _ref2Mobile,
+                    type: TextInputType.phone,
+                    max: 10,
+                    formatters: [FilteringTextInputFormatter.digitsOnly],
+                    validator: (v) =>
+                        getMobileError(v, label: 'Reference 2 mobile'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            SectionCard(
+              title: 'Identity',
+              child: Column(
+                children: [
+                  FloatingLabelField(
+                    label: 'Aadhaar',
+                    errorText: aadhaarError,
+                    child: TextField(
+                      controller: _aadhaar,
+                      keyboardType: TextInputType.number,
+                      maxLength: 12,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      decoration: errorAwareDecoration(
+                        hintText: 'Enter Aadhaar',
+                        hasError: aadhaarError != null,
+                      ),
+                      onChanged: (v) {
+                        final cleaned = sanitizeAadhaar(v);
+                        if (cleaned != v) {
+                          _aadhaar.value = TextEditingValue(
+                            text: cleaned,
+                            selection: TextSelection.collapsed(
+                              offset: cleaned.length,
+                            ),
+                          );
+                        }
+                        setState(() {
+                          if (cleaned.isNotEmpty) _touched['aadhaar'] = true;
+                        });
+                      },
+                      onEditingComplete: () => _markTouched('aadhaar'),
+                      onTapOutside: (_) => _markTouched('aadhaar'),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  FloatingLabelField(
+                    label: 'PAN',
+                    errorText: panError,
+                    child: TextField(
+                      controller: _pan,
+                      textCapitalization: TextCapitalization.characters,
+                      maxLength: 10,
+                      decoration: errorAwareDecoration(
+                        hintText: 'Enter PAN',
+                        hasError: panError != null,
+                      ),
+                      onChanged: (v) {
+                        final cleaned = sanitizePan(v);
+                        if (cleaned != v) {
+                          _pan.value = TextEditingValue(
+                            text: cleaned,
+                            selection: TextSelection.collapsed(
+                              offset: cleaned.length,
+                            ),
+                          );
+                        }
+                        setState(() {
+                          if (cleaned.isNotEmpty) _touched['pan'] = true;
+                        });
+                      },
+                      onEditingComplete: () => _markTouched('pan'),
+                      onTapOutside: (_) => _markTouched('pan'),
                     ),
                   ),
                 ],
               ),
-            )
-          else if (validationErrors.isNotEmpty)
-            ValidationChecklist(errors: validationErrors),
-          SectionCard(
-            title: 'Personal Details',
-            child: Column(
-              children: [
-                _field('fullName', 'Full Name', _fullName),
-                _field('parentName', "Parent's / Spouse Name", _parentName),
-                FloatingLabelField(
-                  label: 'Date of Birth',
-                  errorText: dobError,
-                  child: InkWell(
-                    onTap: _pickDob,
-                    child: InputDecorator(
-                      decoration: errorAwareDecoration(hasError: dobError != null),
-                      child: Text(
-                        _dob == null
-                            ? 'Select date'
-                            : '${_dob!.day.toString().padLeft(2, '0')}/${_dob!.month.toString().padLeft(2, '0')}/${_dob!.year}',
-                        style: TextStyle(
-                          color: _dob == null
-                              ? AppColors.slate400
-                              : AppColors.slate700,
-                        ),
-                      ),
-                    ),
+            ),
+            const SizedBox(height: 16),
+            SectionCard(
+              title: 'Bank Details',
+              child: Column(
+                children: [
+                  _field(
+                    'account',
+                    'Account Number',
+                    _account,
+                    type: TextInputType.number,
+                    formatters: [FilteringTextInputFormatter.digitsOnly],
+                    validator: getAccountError,
                   ),
-                ),
-                const SizedBox(height: 16),
-                FloatingLabelField(
-                  label: 'Gender',
-                  errorText: genderError,
-                  child: DropdownButtonFormField<String>(
-                    initialValue: _gender.isEmpty ? null : _gender,
-                    hint: const Text('Select gender'),
-                    items: const [
-                      DropdownMenuItem(value: 'male', child: Text('Male')),
-                      DropdownMenuItem(value: 'female', child: Text('Female')),
-                      DropdownMenuItem(value: 'other', child: Text('Other')),
-                      DropdownMenuItem(
-                        value: 'prefer_not_to_say',
-                        child: Text('Prefer not to say'),
-                      ),
-                    ],
-                    onChanged: (v) => setState(() {
-                      _gender = v ?? '';
-                      _touched['gender'] = true;
-                    }),
-                    decoration:
-                        errorAwareDecoration(hasError: genderError != null),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                FloatingLabelField(
-                  label: 'Mobile',
-                  child: TextField(
-                    enabled: false,
-                    controller: _mobileDisplay,
-                    decoration: errorAwareDecoration(fillColor: AppColors.slate100),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _field(
-                  'email',
-                  'Email',
-                  _email,
-                  type: TextInputType.emailAddress,
-                  validator: getEmailError,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          SectionCard(
-            title: 'Address',
-            child: Column(
-              children: [
-                _field(
-                  'residential',
-                  'Residential Address',
-                  _residential,
-                  onChanged: () {
-                    if (_sameAsResidential) {
-                      _permanent.text = _residential.text;
-                    }
-                  },
-                ),
-                Row(
-                  children: [
-                    Checkbox(
-                      value: _sameAsResidential,
-                      onChanged: (v) {
-                        setState(() {
-                          _sameAsResidential = v ?? false;
-                          if (_sameAsResidential) {
-                            _permanent.text = _residential.text;
-                            _touched['permanent'] = true;
-                          }
-                        });
-                      },
-                    ),
-                    const Expanded(
-                      child: Text('Permanent address same as residential'),
-                    ),
-                  ],
-                ),
-                _field('permanent', 'Permanent Address', _permanent),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          SectionCard(
-            title: 'Occupation',
-            child: Column(
-              children: [
-                _field('occupation', 'Occupation', _occupation),
-                _field('income', 'Income Details', _income),
-                _field('employer', 'Employer Details', _employer),
-                _field('education', 'Educational Info', _education),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          SectionCard(
-            title: 'Nominee',
-            child: Column(
-              children: [
-                _field('nomineeName', 'Nominee Name', _nomineeName),
-                _field('nomineeRelation', 'Relation', _nomineeRelation),
-                _field(
-                  'nomineeMobile',
-                  'Nominee Mobile',
-                  _nomineeMobile,
-                  type: TextInputType.phone,
-                  max: 10,
-                  formatters: [FilteringTextInputFormatter.digitsOnly],
-                  validator: (v) => getMobileError(v, label: 'Nominee mobile'),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          SectionCard(
-            title: 'Emergency Contact',
-            child: Column(
-              children: [
-                _field('emergencyName', 'Name', _emergencyName),
-                _field('emergencyRelation', 'Relation', _emergencyRelation),
-                _field(
-                  'emergencyMobile',
-                  'Mobile',
-                  _emergencyMobile,
-                  type: TextInputType.phone,
-                  max: 10,
-                  formatters: [FilteringTextInputFormatter.digitsOnly],
-                  validator: (v) =>
-                      getMobileError(v, label: 'Emergency contact mobile'),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          SectionCard(
-            title: 'References',
-            child: Column(
-              children: [
-                _field('ref1Name', 'Reference 1 Name', _ref1Name),
-                _field(
-                  'ref1Mobile',
-                  'Reference 1 Mobile',
-                  _ref1Mobile,
-                  type: TextInputType.phone,
-                  max: 10,
-                  formatters: [FilteringTextInputFormatter.digitsOnly],
-                  validator: (v) =>
-                      getMobileError(v, label: 'Reference 1 mobile'),
-                ),
-                _field('ref2Name', 'Reference 2 Name', _ref2Name),
-                _field(
-                  'ref2Mobile',
-                  'Reference 2 Mobile',
-                  _ref2Mobile,
-                  type: TextInputType.phone,
-                  max: 10,
-                  formatters: [FilteringTextInputFormatter.digitsOnly],
-                  validator: (v) =>
-                      getMobileError(v, label: 'Reference 2 mobile'),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          SectionCard(
-            title: 'Identity',
-            child: Column(
-              children: [
-                FloatingLabelField(
-                  label: 'Aadhaar',
-                  errorText: aadhaarError,
-                  child: TextField(
-                    controller: _aadhaar,
-                    keyboardType: TextInputType.number,
-                    maxLength: 12,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: errorAwareDecoration(
-                      hintText: 'Enter Aadhaar',
-                      hasError: aadhaarError != null,
-                    ),
-                    onChanged: (v) {
-                      final cleaned = sanitizeAadhaar(v);
-                      if (cleaned != v) {
-                        _aadhaar.value = TextEditingValue(
-                          text: cleaned,
-                          selection:
-                              TextSelection.collapsed(offset: cleaned.length),
+                  _field(
+                    'ifsc',
+                    'IFSC',
+                    _ifsc,
+                    validator: getIfscError,
+                    onChanged: () {
+                      final upper = _ifsc.text.toUpperCase();
+                      if (upper != _ifsc.text) {
+                        _ifsc.value = TextEditingValue(
+                          text: upper,
+                          selection: TextSelection.collapsed(
+                            offset: upper.length,
+                          ),
                         );
                       }
-                      setState(() {
-                        if (cleaned.isNotEmpty) _touched['aadhaar'] = true;
-                      });
                     },
-                    onEditingComplete: () => _markTouched('aadhaar'),
-                    onTapOutside: (_) => _markTouched('aadhaar'),
                   ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            SectionCard(
+              title: 'Uploads',
+              child: Column(
+                children: [
+                  UploadBox(
+                    label: 'Photograph *',
+                    fileName: _files['photograph']?.name,
+                    errorText: photoError,
+                    onTap: () => _pickFile('photograph'),
+                  ),
+                  const SizedBox(height: 12),
+                  UploadBox(
+                    label: 'Signature *',
+                    fileName: _files['signature']?.name,
+                    errorText: signatureError,
+                    onTap: () => _pickFile('signature'),
+                  ),
+                  const SizedBox(height: 12),
+                  UploadBox(
+                    label: 'Selfie (optional)',
+                    fileName: _files['selfie']?.name,
+                    onTap: () => _pickFile('selfie'),
+                  ),
+                  const SizedBox(height: 12),
+                  UploadBox(
+                    label: 'Aadhaar Document (optional)',
+                    fileName: _files['aadhaarDoc']?.name,
+                    onTap: () => _pickFile('aadhaarDoc'),
+                  ),
+                  const SizedBox(height: 12),
+                  UploadBox(
+                    label: 'PAN Document (optional)',
+                    fileName: _files['panDoc']?.name,
+                    onTap: () => _pickFile('panDoc'),
+                  ),
+                  const SizedBox(height: 12),
+                  UploadBox(
+                    label: 'Salary Slips (optional)',
+                    fileName: _files['salarySlips']?.name,
+                    onTap: () => _pickFile('salarySlips'),
+                  ),
+                  const SizedBox(height: 12),
+                  UploadBox(
+                    label: 'Bank Statements (optional)',
+                    fileName: _files['bankStatements']?.name,
+                    onTap: () => _pickFile('bankStatements'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            SectionCard(
+              title: 'Create Account',
+              child: Column(
+                children: [
+                  _field(
+                    'username',
+                    'Username',
+                    _username,
+                    validator: getUsernameError,
+                  ),
+                  _field(
+                    'password',
+                    'Password',
+                    _password,
+                    obscure: true,
+                    validator: getPasswordError,
+                  ),
+                  _field(
+                    'confirmPassword',
+                    'Confirm Password',
+                    _confirmPassword,
+                    obscure: true,
+                    validator: (v) =>
+                        getConfirmPasswordError(_password.text, v),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            SectionCard(
+              title: 'Feedback (optional)',
+              child: TextField(
+                controller: _feedback,
+                maxLines: 3,
+                decoration: errorAwareDecoration(
+                  hintText: 'Any feedback for us',
                 ),
-                const SizedBox(height: 16),
-                FloatingLabelField(
-                  label: 'PAN',
-                  errorText: panError,
-                  child: TextField(
-                    controller: _pan,
-                    textCapitalization: TextCapitalization.characters,
-                    maxLength: 10,
-                    decoration: errorAwareDecoration(
-                      hintText: 'Enter PAN',
-                      hasError: panError != null,
+              ),
+            ),
+            const SizedBox(height: 16),
+            SectionCard(
+              title: 'Communication Preferences',
+              child: Column(
+                children: [
+                  for (final key in _prefs.keys)
+                    CheckboxListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(key.toUpperCase()),
+                      value: _prefs[key],
+                      onChanged: (v) =>
+                          setState(() => _prefs[key] = v ?? false),
                     ),
-                    onChanged: (v) {
-                      final cleaned = sanitizePan(v);
-                      if (cleaned != v) {
-                        _pan.value = TextEditingValue(
-                          text: cleaned,
-                          selection:
-                              TextSelection.collapsed(offset: cleaned.length),
-                        );
-                      }
-                      setState(() {
-                        if (cleaned.isNotEmpty) _touched['pan'] = true;
-                      });
-                    },
-                    onEditingComplete: () => _markTouched('pan'),
-                    onTapOutside: (_) => _markTouched('pan'),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          SectionCard(
-            title: 'Bank Details',
-            child: Column(
-              children: [
-                _field(
-                  'account',
-                  'Account Number',
-                  _account,
-                  type: TextInputType.number,
-                  formatters: [FilteringTextInputFormatter.digitsOnly],
-                  validator: getAccountError,
-                ),
-                _field(
-                  'ifsc',
-                  'IFSC',
-                  _ifsc,
-                  validator: getIfscError,
-                  onChanged: () {
-                    final upper = _ifsc.text.toUpperCase();
-                    if (upper != _ifsc.text) {
-                      _ifsc.value = TextEditingValue(
-                        text: upper,
-                        selection:
-                            TextSelection.collapsed(offset: upper.length),
-                      );
-                    }
-                  },
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          SectionCard(
-            title: 'Uploads',
-            child: Column(
-              children: [
-                UploadBox(
-                  label: 'Photograph *',
-                  fileName: _files['photograph']?.name,
-                  errorText: photoError,
-                  onTap: () => _pickFile('photograph'),
-                ),
-                const SizedBox(height: 12),
-                UploadBox(
-                  label: 'Signature *',
-                  fileName: _files['signature']?.name,
-                  errorText: signatureError,
-                  onTap: () => _pickFile('signature'),
-                ),
-                const SizedBox(height: 12),
-                UploadBox(
-                  label: 'Selfie (optional)',
-                  fileName: _files['selfie']?.name,
-                  onTap: () => _pickFile('selfie'),
-                ),
-                const SizedBox(height: 12),
-                UploadBox(
-                  label: 'Aadhaar Document (optional)',
-                  fileName: _files['aadhaarDoc']?.name,
-                  onTap: () => _pickFile('aadhaarDoc'),
-                ),
-                const SizedBox(height: 12),
-                UploadBox(
-                  label: 'PAN Document (optional)',
-                  fileName: _files['panDoc']?.name,
-                  onTap: () => _pickFile('panDoc'),
-                ),
-                const SizedBox(height: 12),
-                UploadBox(
-                  label: 'Salary Slips (optional)',
-                  fileName: _files['salarySlips']?.name,
-                  onTap: () => _pickFile('salarySlips'),
-                ),
-                const SizedBox(height: 12),
-                UploadBox(
-                  label: 'Bank Statements (optional)',
-                  fileName: _files['bankStatements']?.name,
-                  onTap: () => _pickFile('bankStatements'),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          SectionCard(
-            title: 'Create Account',
-            child: Column(
-              children: [
-                _field(
-                  'username',
-                  'Username',
-                  _username,
-                  validator: getUsernameError,
-                ),
-                _field(
-                  'password',
-                  'Password',
-                  _password,
-                  obscure: true,
-                  validator: getPasswordError,
-                ),
-                _field(
-                  'confirmPassword',
-                  'Confirm Password',
-                  _confirmPassword,
-                  obscure: true,
-                  validator: (v) =>
-                      getConfirmPasswordError(_password.text, v),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          SectionCard(
-            title: 'Feedback (optional)',
-            child: TextField(
-              controller: _feedback,
-              maxLines: 3,
-              decoration: errorAwareDecoration(hintText: 'Any feedback for us'),
-            ),
-          ),
-          const SizedBox(height: 16),
-          SectionCard(
-            title: 'Communication Preferences',
-            child: Column(
-              children: [
-                for (final key in _prefs.keys)
-                  CheckboxListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(key.toUpperCase()),
-                    value: _prefs[key],
-                    onChanged: (v) => setState(() => _prefs[key] = v ?? false),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          SectionCard(
-            title: 'eSign Consent',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Checkbox(
-                      value: _eSignConsent,
-                      side: eSignError != null
-                          ? const BorderSide(
-                              color: AppColors.red600,
-                              width: 1.5,
-                            )
-                          : null,
-                      onChanged: (v) => setState(() {
-                        _eSignConsent = v ?? false;
-                        _touched['eSign'] = true;
-                      }),
-                    ),
-                    Expanded(
-                      child: Text(
-                        'I consent to electronically sign and submit this application and confirm that the information provided is true and accurate.',
-                        style: TextStyle(
-                          fontSize: 13,
-                          height: 1.4,
-                          color: eSignError != null
-                              ? AppColors.red600
-                              : AppColors.slate700,
-                        ),
+            const SizedBox(height: 16),
+            SectionCard(
+              title: 'eSign Consent',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Checkbox(
+                        value: _eSignConsent,
+                        side: eSignError != null
+                            ? const BorderSide(
+                                color: AppColors.red600,
+                                width: 1.5,
+                              )
+                            : null,
+                        onChanged: (v) => setState(() {
+                          _eSignConsent = v ?? false;
+                          _touched['eSign'] = true;
+                        }),
                       ),
-                    ),
-                  ],
-                ),
-                if (eSignError != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6, left: 4),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.error_outline,
-                          size: 14,
-                          color: AppColors.red600,
-                        ),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            eSignError,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.red600,
-                            ),
+                      Expanded(
+                        child: Text(
+                          'I consent to electronically sign and submit this application and confirm that the information provided is true and accurate.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            height: 1.4,
+                            color: eSignError != null
+                                ? AppColors.red600
+                                : AppColors.slate700,
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-              ],
+                  if (eSignError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6, left: 4),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.error_outline,
+                            size: 14,
+                            color: AppColors.red600,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              eSignError,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.red600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
             const SizedBox(height: 14),
             const SupportSection(),
           ],

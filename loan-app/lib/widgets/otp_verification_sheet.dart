@@ -44,7 +44,7 @@ class OtpVerificationSheet extends StatefulWidget {
 }
 
 class _OtpVerificationSheetState extends State<OtpVerificationSheet> {
-  static const otpLength = 4;
+  static const otpLength = 6;
   static const resendSeconds = 60;
 
   final _controllers = List.generate(otpLength, (_) => TextEditingController());
@@ -58,7 +58,9 @@ class _OtpVerificationSheetState extends State<OtpVerificationSheet> {
   void initState() {
     super.initState();
     _tick();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _focusNodes[0].requestFocus());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _focusNodes[0].requestFocus(),
+    );
   }
 
   void _tick() {
@@ -113,7 +115,7 @@ class _OtpVerificationSheetState extends State<OtpVerificationSheet> {
   Future<void> _verify() async {
     final cleaned = _otp.replaceAll(RegExp(r'\D'), '');
     if (cleaned.length != otpLength) {
-      setState(() => _error = 'Please enter the complete 4-digit OTP.');
+      setState(() => _error = 'Please enter the complete 6-digit OTP.');
       return;
     }
     setState(() {
@@ -139,7 +141,9 @@ class _OtpVerificationSheetState extends State<OtpVerificationSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final bottom = MediaQuery.viewInsetsOf(context).bottom + MediaQuery.paddingOf(context).bottom;
+    final bottom =
+        MediaQuery.viewInsetsOf(context).bottom +
+        MediaQuery.paddingOf(context).bottom;
 
     return Container(
       decoration: const BoxDecoration(
@@ -169,7 +173,11 @@ class _OtpVerificationSheetState extends State<OtpVerificationSheet> {
                 const Expanded(
                   child: Text(
                     'OTP Verification',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.slate900),
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.slate900,
+                    ),
                   ),
                 ),
                 IconButton(
@@ -179,7 +187,7 @@ class _OtpVerificationSheetState extends State<OtpVerificationSheet> {
               ],
             ),
             Text(
-              'Enter the 4-digit code sent to +91 ${widget.mobile}',
+              'Enter the 6-digit code sent to +91 ${widget.mobile}',
               style: const TextStyle(fontSize: 14, color: AppColors.slate600),
             ),
             const SizedBox(height: 20),
@@ -187,47 +195,59 @@ class _OtpVerificationSheetState extends State<OtpVerificationSheet> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: List.generate(otpLength, (index) {
-                  return SizedBox(
-                    width: 56,
-                    child: TextField(
-                      controller: _controllers[index],
-                      focusNode: _focusNodes[index],
-                      textAlign: TextAlign.center,
-                      keyboardType: TextInputType.number,
-                      maxLength: index == 0 ? otpLength : 1,
-                      autofillHints: index == 0 ? const [AutofillHints.oneTimeCode] : null,
-                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      decoration: const InputDecoration(
-                        counterText: '',
-                        contentPadding: EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      onChanged: (value) {
-                        setState(() => _error = '');
-                        // SMS autofill may paste the full OTP into the first box.
-                        if (index == 0 && value.length > 1) {
-                          final digits = value.replaceAll(RegExp(r'\D'), '');
-                          for (var i = 0; i < otpLength; i++) {
-                            _controllers[i].text = i < digits.length ? digits[i] : '';
+                  return Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(left: index == 0 ? 0 : 6),
+                      child: TextField(
+                        controller: _controllers[index],
+                        focusNode: _focusNodes[index],
+                        textAlign: TextAlign.center,
+                        keyboardType: TextInputType.number,
+                        maxLength: index == 0 ? otpLength : 1,
+                        autofillHints: index == 0
+                            ? const [AutofillHints.oneTimeCode]
+                            : null,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        decoration: const InputDecoration(
+                          counterText: '',
+                          contentPadding: EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        onChanged: (value) {
+                          setState(() => _error = '');
+                          // SMS autofill may paste the full OTP into the first box.
+                          if (index == 0 && value.length > 1) {
+                            final digits = value.replaceAll(RegExp(r'\D'), '');
+                            for (var i = 0; i < otpLength; i++) {
+                              _controllers[i].text = i < digits.length
+                                  ? digits[i]
+                                  : '';
+                            }
+                            if (digits.length >= otpLength) {
+                              _focusNodes[otpLength - 1].requestFocus();
+                              _verify();
+                            } else if (digits.isNotEmpty) {
+                              _focusNodes[digits.length.clamp(0, otpLength - 1)]
+                                  .requestFocus();
+                            }
+                            return;
                           }
-                          if (digits.length >= otpLength) {
-                            _focusNodes[otpLength - 1].requestFocus();
+                          if (value.isNotEmpty && index < otpLength - 1) {
+                            _focusNodes[index + 1].requestFocus();
+                          }
+                          if (value.isEmpty && index > 0) {
+                            _focusNodes[index - 1].requestFocus();
+                          }
+                          if (_controllers.every((c) => c.text.isNotEmpty)) {
                             _verify();
-                          } else if (digits.isNotEmpty) {
-                            _focusNodes[digits.length.clamp(0, otpLength - 1)].requestFocus();
                           }
-                          return;
-                        }
-                        if (value.isNotEmpty && index < otpLength - 1) {
-                          _focusNodes[index + 1].requestFocus();
-                        }
-                        if (value.isEmpty && index > 0) {
-                          _focusNodes[index - 1].requestFocus();
-                        }
-                        if (_controllers.every((c) => c.text.isNotEmpty)) {
-                          _verify();
-                        }
-                      },
+                        },
+                      ),
                     ),
                   );
                 }),
@@ -237,7 +257,11 @@ class _OtpVerificationSheetState extends State<OtpVerificationSheet> {
             if (_timer > 0)
               Text(
                 'Resend OTP in 00:${_timer.toString().padLeft(2, '0')}',
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF16A34A)),
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF16A34A),
+                ),
               )
             else
               TextButton(
@@ -253,7 +277,13 @@ class _OtpVerificationSheetState extends State<OtpVerificationSheet> {
                   color: const Color(0xFFFEF2F2),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Text(_error, style: const TextStyle(color: Color(0xFFDC2626), fontSize: 14)),
+                child: Text(
+                  _error,
+                  style: const TextStyle(
+                    color: Color(0xFFDC2626),
+                    fontSize: 14,
+                  ),
+                ),
               ),
             ],
             const SizedBox(height: 16),

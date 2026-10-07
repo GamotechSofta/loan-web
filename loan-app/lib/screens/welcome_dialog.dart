@@ -34,7 +34,10 @@ class WelcomeProfileDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name = profile['fullName']?.toString() ?? profile['username']?.toString() ?? 'there';
+    final name =
+        profile['fullName']?.toString() ??
+        profile['username']?.toString() ??
+        'there';
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(

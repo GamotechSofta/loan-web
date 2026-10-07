@@ -6,21 +6,40 @@ import '../services/api_service.dart';
 import '../widgets/process_ui.dart';
 
 class UserSignInSheet extends StatefulWidget {
-  const UserSignInSheet({super.key, required this.api, required this.onSignedIn});
+  const UserSignInSheet({
+    super.key,
+    required this.api,
+    required this.onSignedIn,
+    this.onCreateAccount,
+  });
 
   final ApiService api;
-  final Future<void> Function({required String token, required Map<String, dynamic> user}) onSignedIn;
+  final Future<void> Function({
+    required String token,
+    required Map<String, dynamic> user,
+  })
+  onSignedIn;
+  final VoidCallback? onCreateAccount;
 
   static Future<void> show(
     BuildContext context, {
     required ApiService api,
-    required Future<void> Function({required String token, required Map<String, dynamic> user}) onSignedIn,
+    required Future<void> Function({
+      required String token,
+      required Map<String, dynamic> user,
+    })
+    onSignedIn,
+    VoidCallback? onCreateAccount,
   }) {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => UserSignInSheet(api: api, onSignedIn: onSignedIn),
+      builder: (_) => UserSignInSheet(
+        api: api,
+        onSignedIn: onSignedIn,
+        onCreateAccount: onCreateAccount,
+      ),
     );
   }
 
@@ -29,11 +48,14 @@ class UserSignInSheet extends StatefulWidget {
 }
 
 class _UserSignInSheetState extends State<UserSignInSheet> {
-  static const _otpLength = 4;
+  static const _otpLength = 6;
 
   final _mobile = TextEditingController();
   final _password = TextEditingController();
-  final _otpControllers = List.generate(_otpLength, (_) => TextEditingController());
+  final _otpControllers = List.generate(
+    _otpLength,
+    (_) => TextEditingController(),
+  );
   final _otpFocus = List.generate(_otpLength, (_) => FocusNode());
 
   /// `password` | `otp`
@@ -105,7 +127,10 @@ class _UserSignInSheetState extends State<UserSignInSheet> {
       _loading = true;
       _error = '';
     });
-    final result = await widget.api.loginWithPassword(_cleanedMobile, _password.text);
+    final result = await widget.api.loginWithPassword(
+      _cleanedMobile,
+      _password.text,
+    );
     if (!mounted) return;
     await _finishLogin(result);
   }
@@ -188,12 +213,14 @@ class _UserSignInSheetState extends State<UserSignInSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final bottom = MediaQuery.viewInsetsOf(context).bottom + MediaQuery.paddingOf(context).bottom;
+    final bottom =
+        MediaQuery.viewInsetsOf(context).bottom +
+        MediaQuery.paddingOf(context).bottom;
     final subtitle = _mode == 'password'
         ? 'Sign in with your registered mobile number and password.'
         : _otpSent
-            ? 'Enter the 4-digit OTP sent to +91 $_cleanedMobile'
-            : 'Sign in with the mobile number linked to your loan account.';
+        ? 'Enter the 6-digit OTP sent to +91 $_cleanedMobile'
+        : 'Sign in with the mobile number linked to your loan account.';
 
     return Container(
       decoration: const BoxDecoration(
@@ -210,7 +237,10 @@ class _UserSignInSheetState extends State<UserSignInSheet> {
               child: Container(
                 width: 40,
                 height: 4,
-                decoration: BoxDecoration(color: AppColors.slate200, borderRadius: BorderRadius.circular(999)),
+                decoration: BoxDecoration(
+                  color: AppColors.slate200,
+                  borderRadius: BorderRadius.circular(999),
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -222,7 +252,10 @@ class _UserSignInSheetState extends State<UserSignInSheet> {
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
                   ),
                 ),
-                IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                ),
               ],
             ),
             Text(subtitle, style: const TextStyle(color: AppColors.slate600)),
@@ -257,7 +290,10 @@ class _UserSignInSheetState extends State<UserSignInSheet> {
               controller: _mobile,
               enabled: !(_mode == 'otp' && _otpSent),
               keyboardType: TextInputType.phone,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(10)],
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(10),
+              ],
               decoration: const InputDecoration(
                 prefixText: '+91 ',
                 hintText: '10-digit mobile number',
@@ -274,8 +310,13 @@ class _UserSignInSheetState extends State<UserSignInSheet> {
                   labelText: 'Password',
                   hintText: 'Enter your password',
                   suffixIcon: IconButton(
-                    onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                    icon: Icon(_obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                    onPressed: () =>
+                        setState(() => _obscurePassword = !_obscurePassword),
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                    ),
                   ),
                 ),
                 onSubmitted: (_) => _loginWithPassword(),
@@ -287,22 +328,31 @@ class _UserSignInSheetState extends State<UserSignInSheet> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: List.generate(_otpLength, (i) {
-                    return SizedBox(
-                      width: 56,
-                      child: TextField(
-                        controller: _otpControllers[i],
-                        focusNode: _otpFocus[i],
-                        textAlign: TextAlign.center,
-                        keyboardType: TextInputType.number,
-                        maxLength: i == 0 ? _otpLength : 1,
-                        autofillHints: i == 0 ? const [AutofillHints.oneTimeCode] : null,
-                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
-                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                        decoration: const InputDecoration(
-                          counterText: '',
-                          contentPadding: EdgeInsets.symmetric(vertical: 14),
+                    return Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.only(left: i == 0 ? 0 : 6),
+                        child: TextField(
+                          controller: _otpControllers[i],
+                          focusNode: _otpFocus[i],
+                          textAlign: TextAlign.center,
+                          keyboardType: TextInputType.number,
+                          maxLength: i == 0 ? _otpLength : 1,
+                          autofillHints: i == 0
+                              ? const [AutofillHints.oneTimeCode]
+                              : null,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
+                          decoration: const InputDecoration(
+                            counterText: '',
+                            contentPadding: EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          onChanged: (value) => _onOtpChanged(i, value),
                         ),
-                        onChanged: (value) => _onOtpChanged(i, value),
                       ),
                     );
                   }),
@@ -318,17 +368,29 @@ class _UserSignInSheetState extends State<UserSignInSheet> {
               label: _loading
                   ? 'Please wait...'
                   : _mode == 'password'
-                      ? 'Sign In'
-                      : _otpSent
-                          ? 'Verify & Sign In'
-                          : 'Send OTP',
+                  ? 'Sign In'
+                  : _otpSent
+                  ? 'Verify & Sign In'
+                  : 'Send OTP',
               loading: _loading,
               onPressed: _mode == 'password'
                   ? _loginWithPassword
                   : _otpSent
-                      ? _verifyOtp
-                      : _sendOtp,
+                  ? _verifyOtp
+                  : _sendOtp,
             ),
+            if (widget.onCreateAccount != null) ...[
+              const SizedBox(height: 8),
+              Center(
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    widget.onCreateAccount!();
+                  },
+                  child: const Text('New here? Create an account'),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -337,7 +399,11 @@ class _UserSignInSheetState extends State<UserSignInSheet> {
 }
 
 class _ModeChip extends StatelessWidget {
-  const _ModeChip({required this.label, required this.selected, required this.onTap});
+  const _ModeChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   final String label;
   final bool selected;

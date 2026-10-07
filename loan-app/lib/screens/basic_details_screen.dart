@@ -52,16 +52,16 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
       _loanPurpose.isNotEmpty;
 
   String? get _panError => liveError(
-        touched: _panTouched,
-        value: _panController.text,
-        validator: getPanError,
-      );
+    touched: _panTouched,
+    value: _panController.text,
+    validator: getPanError,
+  );
 
   String? get _pinError => liveError(
-        touched: _pinTouched,
-        value: _pinController.text,
-        validator: getPinError,
-      );
+    touched: _pinTouched,
+    value: _pinController.text,
+    validator: getPinError,
+  );
 
   String? get _purposeError =>
       _purposeTouched ? getLoanPurposeError(_loanPurpose).nullIfEmpty : null;
@@ -117,7 +117,9 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
                   if (cleaned != v) {
                     _panController.value = TextEditingValue(
                       text: cleaned,
-                      selection: TextSelection.collapsed(offset: cleaned.length),
+                      selection: TextSelection.collapsed(
+                        offset: cleaned.length,
+                      ),
                     );
                   }
                   setState(() {
@@ -159,13 +161,18 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
                 initialValue: _loanPurpose.isEmpty ? null : _loanPurpose,
                 hint: const Text('Select loan purpose'),
                 items: purposes.entries
-                    .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
+                    .map(
+                      (e) =>
+                          DropdownMenuItem(value: e.key, child: Text(e.value)),
+                    )
                     .toList(),
                 onChanged: (v) => setState(() {
                   _loanPurpose = v ?? '';
                   _purposeTouched = true;
                 }),
-                decoration: errorAwareDecoration(hasError: purposeError != null),
+                decoration: errorAwareDecoration(
+                  hasError: purposeError != null,
+                ),
               ),
             ),
           ],

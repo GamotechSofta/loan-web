@@ -142,7 +142,9 @@ class _ApprovedOfferScreenState extends State<ApprovedOfferScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _TermBullet('Interest is charged on reducing balance basis.'),
+                      _TermBullet(
+                        'Interest is charged on reducing balance basis.',
+                      ),
                       SizedBox(height: 8),
                       _TermBullet(
                         'Processing fee is deducted at the time of disbursement.',
@@ -152,7 +154,9 @@ class _ApprovedOfferScreenState extends State<ApprovedOfferScreen> {
                         'Early repayment is allowed without foreclosure penalty.',
                       ),
                       SizedBox(height: 8),
-                      _TermBullet('Late payment charges apply as per agreement.'),
+                      _TermBullet(
+                        'Late payment charges apply as per agreement.',
+                      ),
                     ],
                   ),
                 ),
@@ -202,25 +206,31 @@ class _ApprovedOfferScreenState extends State<ApprovedOfferScreen> {
                 fontWeight: FontWeight.w600,
                 color: AppColors.slate900,
               ),
-              decoration: errorAwareDecoration(
-                hintText: 'Enter amount',
-                hasError: _applyError.isNotEmpty,
-                fillColor: _celebrating ? AppColors.surfaceMuted : AppColors.surface,
-              ).copyWith(
-                prefixText: '₹  ',
-                prefixStyle: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: _applyError.isNotEmpty
-                      ? AppColors.red600
-                      : AppColors.slate500,
-                ),
-              ),
+              decoration:
+                  errorAwareDecoration(
+                    hintText: 'Enter amount',
+                    hasError: _applyError.isNotEmpty,
+                    fillColor: _celebrating
+                        ? AppColors.surfaceMuted
+                        : AppColors.surface,
+                  ).copyWith(
+                    prefixText: '₹  ',
+                    prefixStyle: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: _applyError.isNotEmpty
+                          ? AppColors.red600
+                          : AppColors.slate500,
+                    ),
+                  ),
               onChanged: (v) {
                 _handleAmountChange();
                 // Live red warning if they clear the amount after applying.
                 if (v.isEmpty && _amountApplied) {
-                  setState(() => _applyError = 'Please enter a valid loan amount first.');
+                  setState(
+                    () =>
+                        _applyError = 'Please enter a valid loan amount first.',
+                  );
                 }
               },
             ),

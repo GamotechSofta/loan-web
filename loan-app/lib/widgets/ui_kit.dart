@@ -36,7 +36,10 @@ class AppScreenHeader extends StatelessWidget {
                       width: 40,
                       height: 40,
                     ),
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      size: 18,
+                    ),
                     color: AppColors.slate800,
                   ),
           ),
@@ -59,7 +62,10 @@ class AppScreenHeader extends StatelessWidget {
                     Text(
                       subtitle!,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 12, color: AppColors.slate500),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.slate500,
+                      ),
                     ),
                   ],
                 ],
@@ -294,7 +300,11 @@ class MoneyGlyph extends StatelessWidget {
 
 /// White pill button used on top of the blue feature cards.
 class OnBrandButton extends StatelessWidget {
-  const OnBrandButton({super.key, required this.label, required this.onPressed});
+  const OnBrandButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+  });
 
   final String label;
   final VoidCallback? onPressed;
@@ -387,7 +397,11 @@ class ActionCard extends StatelessWidget {
           const SizedBox(height: 6),
           const Align(
             alignment: Alignment.centerRight,
-            child: Icon(Icons.arrow_forward_rounded, size: 18, color: AppColors.slate400),
+            child: Icon(
+              Icons.arrow_forward_rounded,
+              size: 18,
+              color: AppColors.slate400,
+            ),
           ),
         ],
       ),
@@ -513,29 +527,29 @@ class StatusBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final (bg, border, fg, icon) = switch (tone) {
       StatusTone.success => (
-          AppColors.green50,
-          AppColors.green200,
-          AppColors.green700,
-          Icons.check_circle_outline_rounded,
-        ),
+        AppColors.green50,
+        AppColors.green200,
+        AppColors.green700,
+        Icons.check_circle_outline_rounded,
+      ),
       StatusTone.pending => (
-          AppColors.amber50,
-          AppColors.amber200,
-          AppColors.amber700,
-          Icons.schedule_rounded,
-        ),
+        AppColors.amber50,
+        AppColors.amber200,
+        AppColors.amber700,
+        Icons.schedule_rounded,
+      ),
       StatusTone.rejected => (
-          AppColors.red50,
-          AppColors.red200,
-          AppColors.red600,
-          Icons.error_outline_rounded,
-        ),
+        AppColors.red50,
+        AppColors.red200,
+        AppColors.red600,
+        Icons.error_outline_rounded,
+      ),
       StatusTone.info => (
-          AppColors.brandSoft,
-          AppColors.brandSoftDeep,
-          AppColors.brandDeep,
-          Icons.info_outline_rounded,
-        ),
+        AppColors.brandSoft,
+        AppColors.brandSoftDeep,
+        AppColors.brandDeep,
+        Icons.info_outline_rounded,
+      ),
     };
 
     final body = Container(
@@ -602,7 +616,7 @@ class AppNavDestination {
   final String label;
 }
 
-/// Three-slot bottom bar; the selected item gets a tinted pill behind its icon.
+/// Compact floating pill bar; the selected item expands to show its label.
 class AppBottomNav extends StatelessWidget {
   const AppBottomNav({
     super.key,
@@ -618,23 +632,36 @@ class AppBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
-    return Container(
-      padding: EdgeInsets.only(top: 8, bottom: 8 + bottomInset),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(top: BorderSide(color: AppColors.line)),
-      ),
-      child: Row(
-        children: [
-          for (var i = 0; i < destinations.length; i++)
-            Expanded(
-              child: _NavItem(
-                destination: destinations[i],
-                selected: i == currentIndex,
-                onTap: () => onSelect(i),
+    return Padding(
+      padding: EdgeInsets.fromLTRB(24, 6, 24, 12 + bottomInset),
+      child: Center(
+        heightFactor: 1,
+        child: Container(
+          padding: const EdgeInsets.all(5),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: AppColors.line),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x1F0F172A),
+                blurRadius: 20,
+                offset: Offset(0, 6),
               ),
-            ),
-        ],
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var i = 0; i < destinations.length; i++)
+                _NavItem(
+                  destination: destinations[i],
+                  selected: i == currentIndex,
+                  onTap: () => onSelect(i),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -653,34 +680,44 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? AppColors.brand : AppColors.slate400;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedContainer(
-              duration: AppMotion.card,
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 5),
-              decoration: BoxDecoration(
-                color: selected ? AppColors.brandSoft : Colors.transparent,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(destination.icon, size: 22, color: color),
+    final color = selected ? Colors.white : AppColors.slate500;
+    return Semantics(
+      selected: selected,
+      button: true,
+      label: destination.label,
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const StadiumBorder(),
+        child: AnimatedContainer(
+          duration: AppMotion.card,
+          curve: Curves.easeOutCubic,
+          height: 42,
+          padding: EdgeInsets.symmetric(horizontal: selected ? 16 : 14),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.brand : Colors.transparent,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: AnimatedSize(
+            duration: AppMotion.card,
+            curve: Curves.easeOutCubic,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(destination.icon, size: 20, color: color),
+                if (selected) ...[
+                  const SizedBox(width: 6),
+                  Text(
+                    destination.label,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ],
             ),
-            const SizedBox(height: 4),
-            Text(
-              destination.label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                color: color,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

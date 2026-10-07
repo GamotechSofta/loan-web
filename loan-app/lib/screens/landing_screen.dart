@@ -5,11 +5,18 @@ import '../config/animations.dart';
 import '../config/theme.dart';
 import '../state/app_state.dart';
 import '../widgets/ui_kit.dart';
+import 'sign_up_screen.dart';
 import 'user_sign_in_sheet.dart';
 
 /// Signed-out entry point: greeting, then apply or check application status.
 class LandingScreen extends StatelessWidget {
   const LandingScreen({super.key});
+
+  Future<void> _openSignUp(BuildContext context) {
+    return Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const SignUpScreen()));
+  }
 
   Future<void> _openSignIn(BuildContext context) async {
     final state = context.read<AppState>();
@@ -17,6 +24,7 @@ class LandingScreen extends StatelessWidget {
       context,
       api: state.api,
       onSignedIn: state.onSignedIn,
+      onCreateAccount: () => _openSignUp(context),
     );
   }
 
@@ -58,7 +66,10 @@ class LandingScreen extends StatelessWidget {
                         const SizedBox(height: 10),
                         const Text(
                           'Simple steps to your financial freedom.',
-                          style: TextStyle(fontSize: 13, color: AppColors.slate500),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.slate500,
+                          ),
                         ),
                       ],
                     ),
@@ -108,6 +119,14 @@ class LandingScreen extends StatelessWidget {
                         ],
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 14),
+                  ActionCard(
+                    title: 'Create an account',
+                    description:
+                        'Sign up with your mobile number\nto check CIBIL and apply',
+                    icon: Icons.person_add_alt_1_outlined,
+                    onTap: () => _openSignUp(context),
                   ),
                   const SizedBox(height: 14),
                   ActionCard(

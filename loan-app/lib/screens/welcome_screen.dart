@@ -96,7 +96,10 @@ class WelcomeScreen extends StatelessWidget {
                         SizedBox(height: 6),
                         Text(
                           'Secure • Reliable • Fast',
-                          style: TextStyle(fontSize: 11.5, color: AppColors.slate400),
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: AppColors.slate400,
+                          ),
                         ),
                       ],
                     ),

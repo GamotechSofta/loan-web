@@ -25,8 +25,9 @@ class _ApplyStep0ScreenState extends State<ApplyStep0Screen> {
   @override
   void initState() {
     super.initState();
-    _mobileController =
-        TextEditingController(text: context.read<AppState>().mobileNumber);
+    _mobileController = TextEditingController(
+      text: context.read<AppState>().mobileNumber,
+    );
   }
 
   @override
@@ -89,7 +90,11 @@ class _ApplyStep0ScreenState extends State<ApplyStep0Screen> {
           children: [
             const Text(
               'We will send a one time password to verify your mobile number.',
-              style: TextStyle(fontSize: 12.5, height: 1.45, color: AppColors.slate500),
+              style: TextStyle(
+                fontSize: 12.5,
+                height: 1.45,
+                color: AppColors.slate500,
+              ),
             ),
             const SizedBox(height: 18),
             if (state.status != null) ...[
@@ -141,8 +146,10 @@ class _ApplyStep0ScreenState extends State<ApplyStep0Screen> {
                           if (v.isNotEmpty) _mobileTouched = true;
                         });
                       },
-                      onEditingComplete: () => setState(() => _mobileTouched = true),
-                      onTapOutside: (_) => setState(() => _mobileTouched = true),
+                      onEditingComplete: () =>
+                          setState(() => _mobileTouched = true),
+                      onTapOutside: (_) =>
+                          setState(() => _mobileTouched = true),
                     ),
                   ),
                 ],
@@ -184,7 +191,11 @@ class _ApplyStep0ScreenState extends State<ApplyStep0Screen> {
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Row(
                   children: [
-                    const Icon(Icons.error_outline, size: 14, color: AppColors.red600),
+                    const Icon(
+                      Icons.error_outline,
+                      size: 14,
+                      color: AppColors.red600,
+                    ),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
@@ -206,7 +217,11 @@ class _ApplyStep0ScreenState extends State<ApplyStep0Screen> {
               'The Name of the Company is ${Company.legalName.toUpperCase()}. '
               'The Registered Office of the Company will be situated in the '
               'STATE OF UTTAR PRADESH.',
-              style: const TextStyle(fontSize: 11, height: 1.5, color: AppColors.slate400),
+              style: const TextStyle(
+                fontSize: 11,
+                height: 1.5,
+                color: AppColors.slate400,
+              ),
             ),
           ],
         ),
@@ -229,7 +244,9 @@ class _StatusMessage extends StatelessWidget {
       decoration: BoxDecoration(
         color: success ? AppColors.green50 : AppColors.red50,
         borderRadius: BorderRadius.circular(AppRadius.field),
-        border: Border.all(color: success ? AppColors.green200 : AppColors.red200),
+        border: Border.all(
+          color: success ? AppColors.green200 : AppColors.red200,
+        ),
       ),
       child: Text(
         message,

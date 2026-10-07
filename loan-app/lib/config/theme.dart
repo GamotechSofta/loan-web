@@ -56,6 +56,14 @@ class AppColors {
   static const Color red600 = Color(0xFFDC2626);
   static const Color rose50 = Color(0xFFFFF1F2);
   static const Color rose700 = Color(0xFFBE123C);
+
+  /// Website palette (`frontend/src/index.css`), used by the home page.
+  static const Color siteNavy = Color(0xFF0B254A);
+  static const Color siteNavyDeep = Color(0xFF071A36);
+  static const Color siteGold = Color(0xFFB5873E);
+  static const Color siteGoldDeep = Color(0xFF9A7234);
+  static const Color siteSoft = Color(0xFFF4EBE0);
+  static const Color siteSurface = Color(0xFFF7F5F2);
 }
 
 /// Corner radii used by the cards, inputs and buttons.
@@ -81,6 +89,14 @@ const LinearGradient brandHeroGradient = LinearGradient(
   end: Alignment(0.364, 1),
   stops: [0, 0.55, 1],
   colors: [AppColors.brand, AppColors.heroMid, AppColors.brandDark],
+);
+
+/// Port of the website `.brand-hero-bg` (160deg navy to black).
+const LinearGradient siteHeroGradient = LinearGradient(
+  begin: Alignment(-0.364, -1),
+  end: Alignment(0.364, 1),
+  stops: [0, 0.55, 1],
+  colors: [AppColors.siteNavy, AppColors.siteNavyDeep, Colors.black],
 );
 
 const List<BoxShadow> shadowSm = [
@@ -127,7 +143,11 @@ ThemeData buildAppTheme() {
       scrolledUnderElevation: 0,
       centerTitle: true,
     ),
-    dividerTheme: const DividerThemeData(color: AppColors.line, space: 1, thickness: 1),
+    dividerTheme: const DividerThemeData(
+      color: AppColors.line,
+      space: 1,
+      thickness: 1,
+    ),
     checkboxTheme: CheckboxThemeData(
       fillColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.selected)) return AppColors.brand;

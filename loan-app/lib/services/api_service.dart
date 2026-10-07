@@ -42,6 +42,20 @@ class ApiService {
     return _postJson('/api/user/login/password', {'mobile': mobile, 'password': password});
   }
 
+  Future<ApiResult> signUp({
+    required String fullName,
+    required String mobile,
+    required String email,
+    required String password,
+  }) async {
+    return _postJson('/api/user/signup', {
+      'fullName': fullName,
+      'mobile': mobile,
+      'email': email,
+      'password': password,
+    });
+  }
+
   Future<ApiResult> getProfile(String token) async {
     try {
       final response = await _client.get(

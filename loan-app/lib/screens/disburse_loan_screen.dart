@@ -46,7 +46,9 @@ class _DisburseLoanScreenState extends State<DisburseLoanScreen> {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     final user = state.userProfile;
-    final loanAmount = (user?['loanAmount'] as num?)?.toInt() ?? state.applicationData.loanAmount;
+    final loanAmount =
+        (user?['loanAmount'] as num?)?.toInt() ??
+        state.applicationData.loanAmount;
     final name = user?['fullName']?.toString();
 
     return LoanProcessLayout(
@@ -63,65 +65,74 @@ class _DisburseLoanScreenState extends State<DisburseLoanScreen> {
         boxed: true,
         child: Column(
           children: [
-          if (_error.isNotEmpty)
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFEF2F2),
-                borderRadius: BorderRadius.circular(8),
+            if (_error.isNotEmpty)
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  _error,
+                  style: const TextStyle(color: Color(0xFFDC2626)),
+                ),
               ),
-              child: Text(_error, style: const TextStyle(color: Color(0xFFDC2626))),
-            ),
-          SectionCard(
-            child: Column(
-              children: [
-                const Text(
-                  'Application Submitted Successfully!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.green700,
+            SectionCard(
+              child: Column(
+                children: [
+                  const Text(
+                    'Application Submitted Successfully!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.green700,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Thank you${name != null ? ', $name' : ''}. Your loan application has been sent to the admin team for review.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 14, color: AppColors.slate600),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'You can track the latest status and every reviewed form item from your Profile.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: AppColors.slate500),
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  Text(
+                    'Thank you${name != null ? ', $name' : ''}. Your loan application has been sent to the admin team for review.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppColors.slate600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'You can track the latest status and every reviewed form item from your Profile.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14, color: AppColors.slate500),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          const SectionCard(
-            title: 'Application Status',
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Status', style: TextStyle(color: Color(0xFF475569))),
-                StatusBadge(status: 'submitted'),
-              ],
+            const SizedBox(height: 16),
+            const SectionCard(
+              title: 'Application Status',
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Status', style: TextStyle(color: Color(0xFF475569))),
+                  StatusBadge(status: 'submitted'),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          SectionCard(
-            title: 'Application Summary',
-            child: Column(
-              children: [
-                InfoRow(label: 'Requested Amount', value: formatCurrency(loanAmount)),
-                const InfoRow(label: 'Review', value: 'Pending with admin'),
-              ],
+            const SizedBox(height: 16),
+            SectionCard(
+              title: 'Application Summary',
+              child: Column(
+                children: [
+                  InfoRow(
+                    label: 'Requested Amount',
+                    value: formatCurrency(loanAmount),
+                  ),
+                  const InfoRow(label: 'Review', value: 'Pending with admin'),
+                ],
+              ),
             ),
-          ),
             const SizedBox(height: 14),
             const SupportSection(),
           ],

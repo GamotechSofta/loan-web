@@ -11,10 +11,14 @@ class NotificationBell extends StatefulWidget {
     super.key,
     required this.profile,
     this.onViewProfile,
+    this.onDark = false,
   });
 
   final Map<String, dynamic> profile;
   final VoidCallback? onViewProfile;
+
+  /// Light outline and icon for use on the navy hero background.
+  final bool onDark;
 
   @override
   State<NotificationBell> createState() => _NotificationBellState();
@@ -117,16 +121,24 @@ class _NotificationBellState extends State<NotificationBell> {
         clipBehavior: Clip.none,
         children: [
           Material(
-            color: Colors.transparent,
-            shape: const CircleBorder(
-              side: BorderSide(color: AppColors.line),
+            color: widget.onDark ? const Color(0x1AFFFFFF) : Colors.transparent,
+            shape: CircleBorder(
+              side: BorderSide(
+                color: widget.onDark ? const Color(0x4DFFFFFF) : AppColors.line,
+              ),
             ),
             child: InkWell(
               onTap: _openSheet,
               customBorder: const CircleBorder(),
-              highlightColor: AppColors.brandSoft,
-              child: const Center(
-                child: BrandIcon('bell', size: 20, color: AppColors.navy),
+              highlightColor: widget.onDark
+                  ? const Color(0x33FFFFFF)
+                  : AppColors.brandSoft,
+              child: Center(
+                child: BrandIcon(
+                  'bell',
+                  size: 20,
+                  color: widget.onDark ? Colors.white : AppColors.navy,
+                ),
               ),
             ),
           ),
@@ -179,8 +191,9 @@ class _NotificationSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final unread =
-        notifications.where((item) => !readIds.contains(item.id)).length;
+    final unread = notifications
+        .where((item) => !readIds.contains(item.id))
+        .length;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
     final maxHeight = MediaQuery.sizeOf(context).height * 0.72;
 
@@ -225,7 +238,10 @@ class _NotificationSheet extends StatelessWidget {
                     ),
                     child: const Text(
                       'Mark all read',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 IconButton(
